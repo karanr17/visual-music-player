@@ -17,6 +17,10 @@ type Material = (typeof LAYERS)[LayerId]["material"];
 // Source pixels the planted foot slides back per walkSide frame, measured from the sheet by
 // scripts/build-characters.mjs. Advancing one frame per this much ground keeps feet planted.
 export const STEP_PX = 2.9;
+// Walking speed in world units per pace-second (see world.ts): about 9 walk frames a second.
+export const WALK_V = 13;
+// Pace-seconds per footfall: the walk cycle's 8 frames hold two footfalls (frames 0 and 4).
+export const FOOTFALL_PACE = (CLIPS.walkSide[1] / 2) / ((WALK_V * K) / STEP_PX);
 export const WALK_FRAMES = CLIPS.walkSide[1];
 
 // Per layer and atlas frame: opaque pixels as (x, y, code); code < 8 is a ramp index, otherwise
@@ -212,7 +216,10 @@ export function drawCharacter(c: SpriteCtx, x: number, y: number, s: number, ap:
   // Physical-pixel origin of the cell, snapped so the figure doesn't shimmer between frames.
   const ox = Math.round(x * K - pxW / 2);
   const oy = Math.round(y * K) - Math.round(((CELL_H - FOOT_PAD + (d.lift ?? 0)) / step) * size);
+  // Walks and dances already move with the music; a figure standing or sitting nods its head.
+  const nod = !clip.startsWith("walk") && d.lift === undefined ? Math.round(c.nod ?? 0) * size : 0;
   for (const id of look.layers) {
+    const dy = nod && (id.startsWith("head_") || id.startsWith("hair_")) ? nod : 0;
     const cell = cells[LAYERS[id].row][frame];
     if (!cell) continue;
     const pal = colours[LAYERS[id].material];
@@ -223,7 +230,7 @@ export function drawCharacter(c: SpriteCtx, x: number, y: number, s: number, ap:
       const col = d.flip ? CELL_W - 1 - sx : sx;
       const code = cell[i + 2];
       const v = c.solid ? solidV : colourOf(code < 8 ? pal[code] : FIXED[code - 8]);
-      fb.block(ox + Math.floor(col / step) * size, oy + Math.floor(sy / step) * size, size, v, alpha);
+      fb.block(ox + Math.floor(col / step) * size, oy + dy + Math.floor(sy / step) * size, size, v, alpha);
     }
   }
 }

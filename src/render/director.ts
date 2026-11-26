@@ -1,3 +1,4 @@
+import { rhythmFrame, type Reactivity, type Rhythm, type RhythmFrame } from "../audio/rhythm";
 import type { SceneScript, Section, SubjectSpec } from "../scene/schema";
 import type { Transition } from "../scene/vocab";
 import { bayer, clamp, FB, H, K, mix, pack, PH, PW, smooth, unpack, W } from "./fb";
@@ -6,7 +7,7 @@ import { lerpParams, worldParams, type WorldParams } from "./palette";
 import { DEFAULT_CAST } from "../scene/normalize";
 import { PALETTE_LOOKS, postProcess, type Look } from "./style";
 import { compileSprite, type CustomSprite } from "./sprites";
-import { renderScene, SHOT_EASE, travelSpeed, type LiveSubject, type RenderOut, type SceneState } from "./world";
+import { alignStep, renderScene, SHOT_EASE, travelSpeed, type LiveSubject, type RenderOut, type SceneState } from "./world";
 
 const FADE_IN = 0.6;
 const FADE_OUT = 0.6;
@@ -71,10 +72,13 @@ export class Director {
   private seekFrom = -1;
   private dissolveMs = 350;
   private lastT = -1;
-  private frameNo = 0;
   // ∫₀ᵗ energy dτ for the playing track; the default assumes a steady mid level.
   private energyInt: (t: number) => number = (t) => 0.4 * t;
-  private pace = (t: number) => 0.6 * t + 0.8 * this.energyInt(t);
+  private energyPace = (t: number) => 0.6 * t + 0.8 * this.energyInt(t);
+  private pace = this.energyPace;
+  private rhythm: Rhythm | null = null;
+  private reactivity: Reactivity = "off";
+  private beatPos: ((t: number) => number) | undefined;
   readonly out = new FB();
 
   constructor(
@@ -96,6 +100,34 @@ export class Director {
     for (let i = 1; i < script.sections.length; i++) this.travelBase.push(this.travelBase[i - 1] + this.travelIn(i - 1, script.sections[i].start));
   }
 
+
+  // With a beat grid and reactivity on, walking steps land on beats, downbeats lift the light,
+  // strong beats nudge the camera and the high band thins or thickens particles. Without either,
+  // the scene moves with the energy envelope as before.
+  setRhythm(rhythm: Rhythm | null, reactivity: Reactivity): void {
+    this.rhythm = reactivity === "off" ? null : rhythm;
+    this.reactivity = reactivity;
+    const r = this.rhythm;
+    this.pace = r ? (t) => r.pace(t) : this.energyPace;
+    this.beatPos = r ? (t) => r.beatPos(t) : undefined;
+  }
+
+  private beat(t: number): RhythmFrame | null {
+    return this.rhythm && this.reactivity !== "off" ? rhythmFrame(this.rhythm, this.reactivity, t) : null;
+  }
+
+  // A one-shot accent (lightning, flash, pulse) hits on the beat nearest its lyric line.
+  private event(m: Section["moments"][number], t: number): SceneState["event"] {
+    if (m.event === "none") return null;
+    let at = m.t;
+    const r = this.rhythm;
+    if (r) {
+      const b = Math.round(r.beatPos(m.t));
+      const i = Math.max(0, Math.min(r.beats.length - 1, b));
+      if (Math.abs(r.beats[i] - m.t) <= r.beatPeriod / 2) at = r.beats[i];
+    }
+    return t >= at ? { kind: m.event, dt: t - at, seed: Math.floor(m.t * 10) } : null;
+  }
 
   setEnergyIntegral(fn: (t: number) => number): void {
     this.energyInt = fn;
@@ -166,7 +198,8 @@ export class Director {
       case "static":
         break;
     }
-    y += a.onset * 4;
+    const beat = this.beat(t);
+    y += beat ? beat.bump : a.onset * 4;
     return { x, y };
   }
 
@@ -230,10 +263,11 @@ export class Director {
     }
 
     const ramp = prev ? clamp(since / PARTICLE_RAMP) : 1;
+    const gain = this.beat(t)?.particles ?? 1;
     const particles =
       prev && prev.particles !== m.particles
-        ? [{ kind: prev.particles, amount: 1 - ramp }, { kind: m.particles, amount: ramp }]
-        : [{ kind: m.particles, amount: 1 }];
+        ? [{ kind: prev.particles, amount: (1 - ramp) * gain }, { kind: m.particles, amount: ramp * gain }]
+        : [{ kind: m.particles, amount: gain }];
 
     const params = { ...this.params[i], lights: this.lights(sec, this.params[i].lights, k, t) };
     const cam = this.camera(i, t, a, m.intensity);
@@ -242,7 +276,7 @@ export class Director {
       params,
       subjects,
       particles,
-      event: m.event !== "none" && t >= m.t ? { kind: m.event, dt: since, seed: Math.floor(m.t * 10) } : null,
+      event: this.event(m, t),
       camX: cam.x,
       camY: cam.y,
       seed: this.seeds[i],
@@ -255,6 +289,9 @@ export class Director {
       fromShot: prev ? (prev.shot ?? "medium") : (m.shot ?? "medium"),
       shotSince: since,
       pace: this.pace,
+      stepAlign: this.rhythm ? alignStep : undefined,
+      beatPos: this.rhythm ? this.beatPos : undefined,
+      nod: this.beat(t)?.nod ?? 0,
     };
   }
 
@@ -303,7 +340,10 @@ export class Director {
       shot: B.shot,
       fromShot: A.shot,
       shotSince: k * SHOT_EASE,
+      nod: B.nod,
       pace: this.pace,
+      stepAlign: this.rhythm ? alignStep : undefined,
+      beatPos: this.rhythm ? this.beatPos : undefined,
     };
   }
 
@@ -341,7 +381,10 @@ export class Director {
       ov = this.transition(tr.from, tr.to, tr.type, clamp(tr.p), t, audio);
     }
 
-    postProcess(this.out, this.style, this.frameNo++, ov);
+    const lift = this.beat(t)?.lift ?? 0;
+    if (ov && lift) ov = { ...ov, brightness: ov.brightness * (1 + lift) };
+    // Grain is seeded from t rather than a frame counter, so a seek lands on the same pixels.
+    postProcess(this.out, this.style, Math.floor(t * 30), ov);
     this.applySeekDissolve();
     this.lastT = t;
     return this.out;

@@ -1,4 +1,5 @@
 import { Clock } from "./audio/clock";
+import { Rhythm, type Reactivity } from "./audio/rhythm";
 import { energyAt, energyIntegral, onsetAt } from "./audio/envelope";
 import { folderSupported, pickFolder, rememberedFolderName, reopenFolder, tracksFromFiles, type Track } from "./library/library";
 import { Captions } from "./render/captions";
@@ -17,6 +18,7 @@ import { CLAUDE_MODELS, getSettings, LOOK_LABELS, modelLabel, onSettings, update
 
 // 60 fps when the machine keeps up; heavy scenes on slow machines fall back to 30.
 const FAST_MS = 1000 / 60;
+const DEMO_BPM = 96;
 const SLOW_MS = 1000 / 30;
 
 const STATUS_TEXT: Record<SceneStatus, string> = {
@@ -114,6 +116,7 @@ export class App {
     void this.scenes.request(track, { front: true });
     try {
       this.director.load(prepared.script, this.styleFor(prepared.script));
+      this.applyRhythm();
       this.director.dissolveIn(800);
     } catch (err) {
       console.error("[player] couldn't load scene script", err);
@@ -174,6 +177,21 @@ export class App {
     void this.audio.play().catch(() => this.toast("Press ▶ to start playback"));
   }
 
+  private rhythms = new WeakMap<object, Rhythm>();
+
+  // The demo reel has no recording to analyse, so it gets a plain grid at its notional tempo.
+  private applyRhythm(): void {
+    let r: Rhythm | null = null;
+    const a = this.current?.analysis?.analysis;
+    if (a) {
+      r = this.rhythms.get(a) ?? new Rhythm(a);
+      this.rhythms.set(a, r);
+    } else if (this.demo && !this.tracks.length) {
+      r = Rhythm.fromTempo(DEMO_BPM, this.demo.duration);
+    }
+    this.director.setRhythm(r, getSettings().reactivity);
+  }
+
   private styleFor(script: SceneScript) {
     const o = getSettings().styleOverride;
     return o === "auto" ? script.style : o;
@@ -185,6 +203,7 @@ export class App {
     if (p.track.id !== this.tracks[this.index]?.id) return;
     const swapped = this.current?.script !== p.script;
     this.current = p;
+    this.applyRhythm();
     if (swapped) {
       this.director.load(p.script, this.styleFor(p.script));
       this.director.dissolveIn(1400);
@@ -209,6 +228,7 @@ export class App {
     const startT = Number(q.get("t") ?? 0);
     this.demo = { ...d, t0: performance.now() / 1000 - startT, startT, freeze: q.has("freeze") };
     this.director.load(d.script, this.styleFor(d.script));
+    this.applyRhythm();
     this.ui.empty.hidden = true;
     this.ui.title.textContent = "Demo: every setting and transition";
   }
@@ -286,6 +306,9 @@ export class App {
           <div class="offset" title="Lyric offset ([ / ])"><button class="icon sm" data-off="-0.1">−</button><span data-offset>+0.0s</span><button class="icon sm" data-off="0.1">+</button></div>
           <select class="model" data-model title="Model that imagines the scenes">${CLAUDE_MODELS.map((m) => `<option value="${m.id}">${m.short}</option>`).join("")}</select>
           <select class="model" data-look title="Look: art style the scenes are drawn in"></select>
+          <select class="model" data-reactivity title="Beat: how strongly the beat moves the picture (needs audio analysis)">
+            <option value="off">Beat: off</option><option value="subtle">Beat: subtle</option><option value="strong">Beat: strong</option>
+          </select>
           <input type="file" accept="image/*" data-ref-file hidden>
           <button class="icon" data-cc title="Captions (L)">CC</button>
           <button class="icon" data-edit title="Scene editor (E)">✎</button>
@@ -315,6 +338,7 @@ export class App {
       cc: q("[data-cc]"),
       model: q("[data-model]"),
       look: q("[data-look]"),
+      reactivity: q("[data-reactivity]"),
       refFile: q("[data-ref-file]"),
       settings: q("dialog.settings"),
       editor: q("dialog.editor"),
@@ -342,6 +366,8 @@ export class App {
     onSettings((s) => {
       this.ui.cc.classList.toggle("on", s.captions);
       (this.ui.look as HTMLSelectElement).value = s.styleOverride;
+      (this.ui.reactivity as HTMLSelectElement).value = s.reactivity;
+      this.applyRhythm();
       const script = this.current?.script ?? (this.demo && !this.tracks.length ? this.demo.script : null);
       if (script) this.director.load(script, this.styleFor(script));
     });
@@ -374,6 +400,8 @@ export class App {
 
     this.renderLookOptions();
     void loadReference().then(() => this.renderLookOptions());
+    (this.ui.reactivity as HTMLSelectElement).value = getSettings().reactivity;
+    this.ui.reactivity.addEventListener("change", () => updateSettings({ reactivity: (this.ui.reactivity as HTMLSelectElement).value as Reactivity }));
     this.ui.look.addEventListener("change", () => {
       const sel = this.ui.look as HTMLSelectElement;
       if (sel.value === "__pick") {

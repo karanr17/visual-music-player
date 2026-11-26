@@ -29,6 +29,10 @@ subjects kept above the captions and player bar. Both sides are `?demo&t=…&fre
   (tempo, bars, repeating parts, sound descriptors): scene changes land on downbeats, instrumental
   stretches get worlds of their own, and a returning chorus returns to its world. See
   [Audio analysis](#audio-analysis-music-connector).
+- Music-driven animation from the analysis's beat grid: footsteps land on beats, the light lifts on
+  downbeats, strong beats nudge the camera, standing figures nod along, and particles follow the
+  high band. **Beat** in the player bar sets it to off, subtle (default) or strong. See
+  [Music-driven animation](#music-driven-animation).
 - Kinetic pixel captions, section transitions, and a JSON scene editor with export/import.
 - A built-in `?demo` showcase that needs no audio files and no LLM.
 
@@ -145,6 +149,34 @@ layout. (Here the model also brought the chorus back to a snowy night without an
 repeated lyrics; with analysis that is enforced by compile rather than left to the model.) The strip under each picture shows the sections (colour = kind
 of section, letter = recurrence group, ticks = downbeats). Song: "Unbury Your Heart" by Siobhan
 Dakay feat. Madam Snowflake, CC BY 3.0 (see [docs/demo](docs/demo/README.md)).*
+
+### Music-driven animation
+
+[![Muted: Beat off (left) and Beat strong (right) on the same scene](docs/beat-muted.gif)](docs/beat-muted.mp4)
+
+*Muted, so only the picture keeps time: [docs/beat-muted.mp4](docs/beat-muted.mp4) (16 s, Beat off
+on the left, strong on the right). With sound: [docs/beat-with-sound.mp4](docs/beat-with-sound.mp4)
+(16 s, subtle on the left, strong on the right). The dot at the bottom right of each strip is a
+metronome drawn from the analysis's beats (large on downbeats), to check the picture against.
+Same CC BY song and scene script as above; the script is
+[docs/demo/unbury-your-heart.scene.json](docs/demo/unbury-your-heart.scene.json).*
+
+With an analysis, `src/audio/rhythm.ts` turns its beats, downbeats and band envelopes into
+functions of time, and the renderer reads them at each frame:
+
+| What | Driven by | Subtle / strong |
+|---|---|---|
+| Walking steps | The walk's pace is the beat position, scaled so a footfall (walk frames 0 and 4) lands on every beat; a walk starts on a beat and turns take whole steps. Half or double time keeps the stride natural for very fast or slow tempos. Dances and idle breathing step with it, and swaying things sway once every two beats. | same |
+| Light | Brightness lift on each downbeat and, smaller, each beat, scaled by loudness | up to +5% / +13% on downbeats |
+| Camera | A short drop on beats with a strong low-end (kick) hit | 1.2 px / 3 px |
+| Heads | Standing and sitting figures dip their heads at the start of each beat | 1 px / 2 px |
+| Particles | Density follows the high band (hats, cymbals) within the song's own range | thins to 65% / 30% when the highs drop out |
+| Accents | Lightning, flashes and pulses written for a lyric line hit on the nearest beat | same |
+
+Everything is a pure function of the playback time, so seeking, scrubbing and frame-by-frame
+capture land on the same picture (a test renders a frame after playing up to it and after
+jumping to it, and compares pixels). With **Beat: off**, or with no analysis, the scene moves with
+the loudness envelope as before; the `?demo` reel, which has no recording, uses a plain 96 BPM grid.
 
 ### Run the two together
 
