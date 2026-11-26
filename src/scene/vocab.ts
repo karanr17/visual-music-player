@@ -21,6 +21,10 @@ export const MOODS = [
 
 export const CAMERAS = ["static", "drift", "slow_pan", "float"] as const;
 
+// How close the camera is for a moment: wide sets the place, medium frames people head to toe,
+// close fills the frame with the focus subject.
+export const SHOTS = ["wide", "medium", "close"] as const;
+
 export const TRANSITIONS = [
   "crossfade", "dissolve", "fade_black", "flash", "pan_up", "pan_down", "pan_left", "pan_right",
   "zoom_in", "time_shift", "weather_shift",
@@ -66,6 +70,7 @@ export type TimeOfDay = (typeof TIMES)[number];
 export type Weather = (typeof WEATHERS)[number];
 export type Mood = (typeof MOODS)[number];
 export type Camera = (typeof CAMERAS)[number];
+export type Shot = (typeof SHOTS)[number];
 export type Transition = (typeof TRANSITIONS)[number];
 export type SectionLabel = (typeof SECTION_LABELS)[number];
 export type SubjectKind = (typeof SUBJECTS)[number];

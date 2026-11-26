@@ -92,3 +92,27 @@ export function energySegments(env: Envelope | null, duration: number, seg = 12)
   }
   return out;
 }
+
+const integrals = new WeakMap<Envelope, Float64Array>();
+
+// ∫₀ᵗ energyAt(env, τ) dτ, exact for the piecewise-linear energyAt and O(1) per call after a
+// one-off prefix sum. Anything paced by energy integrates this, so a change in loudness speeds
+// motion up from now on instead of rescaling the distance already covered.
+export function energyIntegral(env: Envelope | null, t: number): number {
+  if (!env) return 0.4 * t;
+  if (t <= 0) return 0.4 * t;
+  let sums = integrals.get(env);
+  const n = env.values.length;
+  if (!sums) {
+    sums = new Float64Array(n);
+    for (let i = 1; i < n; i++) sums[i] = sums[i - 1] + ((smoothedAt(env, i - 1) + smoothedAt(env, i)) / 2) * env.hop;
+    integrals.set(env, sums);
+  }
+  const f = t / env.hop;
+  if (f >= n - 1) return sums[n - 1] + smoothedAt(env, n - 1) * (t - (n - 1) * env.hop);
+  const i = Math.floor(f);
+  const a = smoothedAt(env, i);
+  const b = smoothedAt(env, i + 1);
+  const u = f - i;
+  return sums[i] + (a * u + ((b - a) * u * u) / 2) * env.hop;
+}

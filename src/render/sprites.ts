@@ -5,7 +5,7 @@ import { hexRgb, lit, type Light } from "./lighting";
 import { hash1 } from "./noise";
 import * as obj from "./objects";
 import type { Palette } from "./palette";
-import { ageScale, extraLook, person, type Facing, type Pose } from "./people";
+import { drawCharacter, extraLook, FIGURE_H, type CharDraw } from "./characters";
 
 export interface CustomSprite {
   w: number;
@@ -34,6 +34,24 @@ export interface SpriteCtx {
   haze: number;
   hazeCol: RGB;
   cast: CastSpec;
+  // The scene's pace integral at t (see SceneState.pace): dance steps advance with it.
+  pace: number;
+}
+
+// How a subject is moving this frame, worked out by the world from its motion.
+export interface Gait {
+  // Ground covered on foot (logical px). Walk frames advance one per `step` of it, so feet plant.
+  dist: number;
+  step: number;
+  moving: boolean;
+  // Facing left (side clips face right as drawn).
+  flip: boolean;
+  // Facing the viewer mid-turn.
+  front?: boolean;
+  // Walking away along a road: the walk frame, counted from road travel.
+  away?: number;
+  // Seconds since the subject started its current motion.
+  age: number;
 }
 
 function normals(w: number, h: number, opaque: (i: number) => boolean): { nx: Float32Array; ny: Float32Array } {
@@ -148,58 +166,6 @@ function blit(c: SpriteCtx, art: Art, x: number, y: number, s: number, alpha: nu
 
 function thick(c: SpriteCtx, x0: number, y0: number, x1: number, y1: number, w: number, col: RGB, a: number): void {
   c.fb.line(x0, y0, x1, y1, col, a, w);
-}
-
-const STAND: Pose = { armL: -0.32, armR: 0.32, legL: -0.16, legR: 0.16 };
-
-// Side-view stride facing right: the swinging leg bends at the knee with its foot trailing,
-// and the body rises as the legs pass each other.
-function walkPose(ph: number): Pose {
-  const s = Math.sin(ph);
-  const c = Math.cos(ph);
-  return {
-    armL: s * 0.5,
-    armR: -s * 0.5,
-    legL: -s * 0.45,
-    legR: s * 0.45,
-    kneeL: -Math.max(0, -c) * 0.7,
-    kneeR: -Math.max(0, c) * 0.7,
-    bob: (1 - Math.abs(s)) * 0.6,
-  };
-}
-
-function mirror(p: Pose): Pose {
-  return {
-    ...p,
-    armL: -p.armR,
-    armR: -p.armL,
-    legL: -p.legR,
-    legR: -p.legL,
-    kneeL: -(p.kneeR ?? 0),
-    kneeR: -(p.kneeL ?? 0),
-    lean: -(p.lean ?? 0),
-    liftL: p.liftR,
-    liftR: p.liftL,
-  };
-}
-
-// Ground covered by one full stride cycle (two steps), matched to the leg swing in walkPose.
-export function strideLength(kind: SubjectKind, s: number): number {
-  if (kind === "dog" || kind === "cat") return 14 * s;
-  const h = 26 * s * (kind === "child" ? 0.6 : 1);
-  return 2.6 * ((8 * h) / 18);
-}
-
-// Walking away from the viewer: no sideways stride, feet alternately lift and the body bobs.
-function awayPose(ph: number): Pose {
-  const s = Math.sin(ph);
-  return { armL: -0.22 - s * 0.12, armR: 0.22 - s * 0.12, legL: -0.1, legR: 0.1, liftL: Math.max(0, s) * 0.45, liftR: Math.max(0, -s) * 0.45, bob: Math.abs(s) * 0.5 };
-}
-
-function dancePose(ph: number, e: number): Pose {
-  const s = Math.sin(ph);
-  const k = 0.6 + e * 0.8;
-  return { armL: Math.PI - 0.6 + s * k, armR: -Math.PI + 0.6 + Math.cos(ph) * k, legL: -0.3 + s * 0.2, legR: 0.3 + s * 0.2, lean: s * 1.5 };
 }
 
 // --- ASCII sprites ---
@@ -455,6 +421,21 @@ const SYMBOLIC = new Set<SubjectKind>([
 export const FLYING = new Set<SubjectKind>(["bird", "bird_flock", "butterfly", "balloon", "kite"]);
 export const CELESTIAL = new Set<SubjectKind>(["big_moon", "big_sun", "planet", "rainbow"]);
 
+// Idle breathing alternates two frames; seeded so a group doesn't breathe in unison.
+const idleFrame = (c: SpriteCtx, seed: number) => Math.floor(c.t / 0.8 + seed);
+
+// A dance assembled from the sheet's authored frames (idle, spellcast, emote), with a bounce.
+const DANCE: [clip: CharDraw["clip"], frame: number, lift: number][] = [
+  ["idleFront", 0, 0], ["castFront", 3, 1], ["castFront", 4, 2], ["emoteFront", 2, 2],
+  ["castFront", 4, 1], ["castFront", 3, 0], ["castFront", 2, 1], ["idleFront", 1, 0],
+];
+
+// Reaching: the arms rise through the spellcast frames, then strain between the top two.
+function reach(age: number): number {
+  const up = Math.floor(age * 7);
+  return up < 5 ? up : 4 + (Math.floor(age * 1.5) % 2);
+}
+
 export function drawSubject(
   kind: SubjectKind,
   c: SpriteCtx,
@@ -462,18 +443,25 @@ export function drawSubject(
   y: number,
   s: number,
   alpha: number,
-  moving: boolean,
-  flip: boolean,
+  g: Gait,
   seed: number,
   custom = "",
-  gait?: number,
 ): void {
-  const ph = gait ?? c.t * (moving ? 7 : 2) + seed;
-  const fh = 26 * s;
-  const stride = (p: number) => (c.alongDepth ? awayPose(p) : flip ? mirror(walkPose(p)) : walkPose(p));
-  const walkFacing: Facing = c.alongDepth ? "back" : flip ? -1 : 1;
+  const { moving, flip } = g;
   const lead = c.cast.lead;
   const kid = { ...c.cast.child, age: "child" as const };
+  // A figure that walks when moving and otherwise holds `still`.
+  const walker = (who: typeof lead, still: CharDraw, px = x, phase = 0): void => {
+    let d: CharDraw;
+    if (g.away !== undefined) d = { clip: "walkBack", frame: g.away + phase, flip: false };
+    else if (moving) d = { clip: "walkSide", frame: g.dist / g.step + phase, flip };
+    else if (g.front) d = { clip: "idleFront", frame: idleFrame(c, seed), flip: false };
+    else if (g.dist > 0) d = { clip: "idleSide", frame: idleFrame(c, seed), flip };
+    else d = still;
+    drawCharacter(c, px, y, s, who, d, alpha);
+  };
+  const idle: CharDraw = { clip: "idleFront", frame: idleFrame(c, seed), flip: false };
+  const figH = (FIGURE_H * s) / K;
   switch (kind) {
     case "custom": {
       const sp = c.sprites.get(custom);
@@ -489,52 +477,57 @@ export function drawSubject(
       return;
     }
     case "lone_figure":
-      return person(c, x, y, fh * ageScale(lead), STAND, lead, alpha, 0);
     case "walking_figure":
-      return person(c, x, y, fh * ageScale(lead), moving ? stride(ph) : STAND, lead, alpha, moving ? walkFacing : 0);
+      return walker(lead, idle);
     case "child":
-      return person(c, x, y, fh * ageScale(kid), moving ? stride(ph) : STAND, kid, alpha, moving ? walkFacing : 0);
+      return walker(kid, idle);
     case "car":
       if (c.alongDepth) return obj.carRear(c, x, y, s, alpha, seed);
       return obj.carSide(c, x, y, s, alpha, seed, flip, moving);
     case "dancer": {
       const who = Math.floor(seed) % 2 ? c.cast.partner : lead;
-      return person(c, x, y, fh * ageScale(who), dancePose(c.t * (3 + c.energy * 4) + seed, c.energy), who, alpha, 0);
+      const n = Math.floor(c.pace * 4.5 + seed);
+      const [clip, frame, lift] = DANCE[((n % DANCE.length) + DANCE.length) % DANCE.length];
+      // Every other bar mirrors, so the dance sways side to side.
+      const mirror = Math.floor(n / DANCE.length) % 2 === 1;
+      return drawCharacter(c, x, y, s, who, { clip, frame, flip: mirror, lift }, alpha);
     }
     case "reaching_figure":
-      return person(c, x, y, fh * ageScale(lead), { armL: Math.PI - 0.35 + Math.sin(c.t) * 0.1, armR: Math.PI + 0.3, legL: -0.1, legR: 0.1, lean: 0.3 }, lead, alpha, 0);
+      return drawCharacter(c, x, y, s, lead, { clip: "castFront", frame: reach(g.age), flip: false }, alpha);
     case "sitting_figure":
-      return person(c, x, y, fh * ageScale(lead), { armL: -0.5, armR: -0.3, elbowL: -0.6, elbowR: -0.6, legL: -1.4, legR: -1.3, kneeL: 1.5, kneeR: 1.4, sit: true }, lead, alpha, -1);
+      // Sitting on the ground, facing left as the old figure did.
+      return drawCharacter(c, x, y, s, lead, { clip: "sitSide", frame: 0, flip: true }, alpha);
     case "figure_with_umbrella": {
-      const h = fh * ageScale(lead);
-      person(c, x, y, h, { armL: -0.25, armR: Math.PI - 0.2, elbowR: 0.1, legL: -0.12, legR: 0.12 }, lead, alpha, 0);
-      umbrella(c, x + 2.5 * s, y - h * 1.12, 9 * s, alpha);
+      walker(lead, idle);
+      umbrella(c, x + (moving ? (flip ? -1 : 1) * 1.5 * s : 2.5 * s), y - figH * 0.98, 9 * s, alpha);
       return;
     }
     case "couple": {
       const p = c.cast.partner;
-      const a = moving ? stride(ph) : STAND;
-      const b = moving ? stride(ph + Math.PI * 0.2) : STAND;
-      const f: Facing = moving ? walkFacing : 0;
-      person(c, x - 5 * s, y, fh * ageScale(lead), { ...a, armR: moving ? a.armR : 0.75 }, lead, alpha, f);
-      person(c, x + 5 * s, y, fh * ageScale(p), { ...b, armL: moving ? b.armL : -0.75 }, p, alpha, f);
+      const gap = 6 * s;
+      // Walking side by side, the partner a quarter-step out of phase so their feet don't match.
+      walker(lead, idle, x - gap);
+      walker(p, { ...idle, frame: idle.frame + 1 }, x + gap, moving || g.away !== undefined ? 2 : 0);
       return;
     }
     case "embracing_couple": {
       const p = c.cast.partner;
-      person(c, x - 2.4 * s, y, fh * ageScale(lead), { armL: 1.25, armR: 1.45, elbowL: -0.5, elbowR: -0.6, legL: -0.1, legR: 0.12, lean: 0.6 }, lead, alpha, 1);
-      person(c, x + 2.4 * s, y, fh * ageScale(p), { armL: -1.25, armR: -1.45, elbowL: 0.5, elbowR: 0.6, legL: -0.12, legR: 0.1, lean: -0.6 }, p, alpha, -1);
+      // Facing each other with arms forward, close enough to overlap.
+      drawCharacter(c, x - 3 * s, y, s, lead, { clip: "castSide", frame: 3, flip: false }, alpha);
+      drawCharacter(c, x + 3 * s, y, s, p, { clip: "castSide", frame: 3, flip: true }, alpha);
       return;
     }
-    case "crowd":
-      for (let i = 0; i < 9; i++) {
-        const hx = x - 40 * s + i * 10 * s + (hash1(seed + i) - 0.5) * 4;
-        const hh = fh * (0.85 + hash1(seed + i * 3) * 0.2);
+    case "crowd": {
+      const people = Array.from({ length: 9 }, (_, i) => i).sort((a, b) => (a % 2) - (b % 2));
+      for (const i of people) {
+        const hx = x - 40 * s + i * 10 * s + (hash1(seed + i) - 0.5) * 4 * s;
         const up = c.energy > 0.55 && hash1(i + Math.floor(c.t * 2)) > 0.5;
-        const pose: Pose = up ? { armL: Math.PI - 0.4, armR: -Math.PI + 0.4, legL: -0.1, legR: 0.1 } : STAND;
-        person(c, hx, y + (i % 2) * 2, hh, pose, extraLook(seed + i), alpha, 0);
+        const d: CharDraw = up ? { clip: "emoteFront", frame: 2, flip: i % 2 === 1 } : { clip: "idleFront", frame: idleFrame(c, seed + i * 0.37), flip: i % 2 === 1 };
+        // Back row first; the whole crowd stands a little up the floor, behind the subjects.
+        drawCharacter(c, hx, y - (i % 2 ? 4 * s : 7 * s), s, extraLook(seed + i), d, alpha);
       }
       return;
+    }
     case "tree":
       return obj.tree(c, x, y, s, alpha, seed);
     case "dead_tree":
@@ -554,9 +547,11 @@ export function drawSubject(
     case "wilted_flower":
       return obj.flower(c, x, y, Math.max(1, s), alpha, kind, seed);
     case "dog":
-      return obj.dog(c, x, y, s, alpha, seed, flip, moving, ph);
-    case "cat":
-      return obj.cat(c, x, y, s, alpha, seed, flip, moving, ph);
+    case "cat": {
+      // One gait cycle per 14 px of ground at scale 1, so the paws keep pace with the body.
+      const ph = moving ? (g.dist / (14 * Math.max(0.5, s))) * Math.PI * 2 + seed : c.t * 2 + seed;
+      return kind === "dog" ? obj.dog(c, x, y, s, alpha, seed, flip, moving, ph) : obj.cat(c, x, y, s, alpha, seed, flip, moving, ph);
+    }
     case "campfire":
       return campfire(c, x, y, s, alpha);
     case "street_lamp":

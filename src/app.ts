@@ -1,7 +1,8 @@
 import { Clock } from "./audio/clock";
-import { energyAt, onsetAt } from "./audio/envelope";
+import { energyAt, energyIntegral, onsetAt } from "./audio/envelope";
 import { folderSupported, pickFolder, rememberedFolderName, reopenFolder, tracksFromFiles, type Track } from "./library/library";
 import { Captions } from "./render/captions";
+import { loadCharacters } from "./render/characters";
 import { demoContent } from "./demo";
 import { Director } from "./render/director";
 import { PH, PW } from "./render/fb";
@@ -64,9 +65,19 @@ export class App {
     this.audio.preload = "auto";
     this.buildUi();
     this.bindEvents();
+    this.director.setEnergyIntegral(this.energySum);
     this.startDemoFromUrl();
-    requestAnimationFrame(this.tick);
+    // Figures are drawn from the character atlas, so the first frame waits for it.
+    loadCharacters()
+      .catch((err) => console.error("[player] character sprites failed to load", err))
+      .finally(() => requestAnimationFrame(this.tick));
   }
+
+  // Must agree with the energy each frame passes to the director (see render).
+  private energySum = (t: number): number => {
+    if (this.demo && !this.tracks.length) return 0.45 * t + (0.25 / 1.7) * (1 - Math.cos(t * 1.7));
+    return energyIntegral(this.current?.envelope ?? null, t - (this.current?.prefs.lyricOffset ?? 0));
+  };
 
   // ---------- Playback ----------
 
