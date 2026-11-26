@@ -1,9 +1,18 @@
 node_modules
 dist
 .env*
+!.env.example
 *.mp3
 *.flac
 *.wav
 *.m4a
 *.lrc
 .DS_Store
+
+# Personal listening-history exports (Google Takeout, Spotify). Never commit these.
+Takeout/
+watch-history.*
+search-history.*
+StreamingHistory*.json
+Streaming_History*.json
+endsong*.json
