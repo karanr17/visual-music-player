@@ -1,11 +1,15 @@
 #!/usr/bin/env node
-// Renders two scene scripts for the same song side by side, with the song's audio, into an mp4.
+// Renders one scene script, or two side by side, for a song into an mp4 with its audio.
 // Frames come from the player's ?capture mode, so they are exactly what the renderer draws at
 // each time, not a screen recording.
 //
 //   npm i --no-save playwright && npm run dev   (in another terminal)
 //   node scripts/render-comparison.mjs --audio song.mp3 --lrc song.lrc --analysis song.analysis.json \
 //     --left without.json --right with.json --from 0 --to 140 --out docs/comparison.mp4
+//
+// Each side can set --{left,right}-reactivity (off / subtle / strong, default subtle) and
+// --{left,right}-analysis (whether that side sees --analysis; by default only the right does).
+// Leave out --right for a single picture; --mute drops the audio track.
 //
 // A scene script JSON is what the editor (E) shows, or one entry of "Export all scripts".
 
@@ -24,6 +28,11 @@ const { values: a } = parseArgs({
     right: { type: "string" },
     "left-title": { type: "string", default: "Without analysis" },
     "right-title": { type: "string", default: "With SongAnalysis" },
+    "left-reactivity": { type: "string", default: "subtle" },
+    "right-reactivity": { type: "string", default: "subtle" },
+    "left-analysis": { type: "boolean", default: false },
+    "right-analysis": { type: "boolean", default: true },
+    mute: { type: "boolean", default: false },
     from: { type: "string", default: "0" },
     to: { type: "string" },
     fps: { type: "string", default: "12" },
@@ -31,7 +40,7 @@ const { values: a } = parseArgs({
     out: { type: "string", default: "comparison.mp4" },
   },
 });
-for (const k of ["audio", "left", "right", "to"]) if (!a[k]) throw new Error(`--${k} is required`);
+for (const k of ["audio", "left", "to"]) if (!a[k]) throw new Error(`--${k} is required`);
 
 const { chromium } = await import("playwright");
 const from = Number(a.from);
@@ -46,7 +55,7 @@ const page = await browser.newPage();
 // The audio is handed to the page through a routed URL so it never has to be served or committed.
 await page.route("**/__capture/audio", (r) => r.fulfill({ body: readFileSync(a.audio), contentType: "audio/mpeg" }));
 
-async function side(name, scriptPath, title, analysisPath) {
+async function side(name, scriptPath, title, analysisPath, reactivity) {
   await page.goto(`${a.url}/?capture`);
   await page.waitForFunction(() => "vmpCapture" in window);
   const input = {
@@ -55,6 +64,7 @@ async function side(name, scriptPath, title, analysisPath) {
     analysis: analysisPath ? JSON.parse(readFileSync(analysisPath, "utf8")) : undefined,
     audioUrl: "/__capture/audio",
     title,
+    reactivity,
   };
   await page.evaluate((i) => window.vmpCapture.load(i), input);
   const dir = join(work, name);
@@ -68,21 +78,24 @@ async function side(name, scriptPath, title, analysisPath) {
   return dir;
 }
 
-const left = await side("left", a.left, a["left-title"], null);
-const right = await side("right", a.right, a["right-title"], a.analysis);
+const left = await side("left", a.left, a["left-title"], a["left-analysis"] ? a.analysis : null, a["left-reactivity"]);
+const right = a.right ? await side("right", a.right, a["right-title"], a["right-analysis"] ? a.analysis : null, a["right-reactivity"]) : null;
 await browser.close();
 
+const inputs = ["-framerate", String(fps), "-i", join(left, "%05d.png")];
+if (right) inputs.push("-framerate", String(fps), "-i", join(right, "%05d.png"));
+const audioIdx = right ? 2 : 1;
+if (!a.mute) inputs.push("-ss", String(from), "-t", String(to - from), "-i", a.audio);
 const ff = spawnSync(
   "ffmpeg",
   [
     "-y", "-loglevel", "error",
-    "-framerate", String(fps), "-i", join(left, "%05d.png"),
-    "-framerate", String(fps), "-i", join(right, "%05d.png"),
-    "-ss", String(from), "-t", String(to - from), "-i", a.audio,
-    "-filter_complex", "[0][1]hstack=inputs=2,pad=iw+8:ih:4:0:black[v]",
-    "-map", "[v]", "-map", "2:a",
+    ...inputs,
+    "-filter_complex", right ? "[0][1]hstack=inputs=2,pad=iw+8:ih:4:0:black[v]" : "[0]null[v]",
+    "-map", "[v]",
+    ...(a.mute ? ["-an"] : ["-map", `${audioIdx}:a`, "-c:a", "aac", "-b:a", "96k", "-shortest"]),
     "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "30", "-preset", "slow", "-tune", "animation",
-    "-c:a", "aac", "-b:a", "96k", "-shortest", "-movflags", "+faststart",
+    "-movflags", "+faststart",
     resolve(a.out),
   ],
   { stdio: "inherit" },

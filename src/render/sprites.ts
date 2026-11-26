@@ -5,7 +5,7 @@ import { hexRgb, lit, type Light } from "./lighting";
 import { hash1 } from "./noise";
 import * as obj from "./objects";
 import type { Palette } from "./palette";
-import { drawCharacter, extraLook, FIGURE_H, type CharDraw } from "./characters";
+import { drawCharacter, extraLook, FIGURE_H, FOOTFALL_PACE, type CharDraw } from "./characters";
 
 export interface CustomSprite {
   w: number;
@@ -36,6 +36,10 @@ export interface SpriteCtx {
   cast: CastSpec;
   // The scene's pace integral at t (see SceneState.pace): dance steps advance with it.
   pace: number;
+  // Beat position at t when the scene follows a beat grid (see SceneState.beatPos).
+  beat?: number;
+  // Source pixels a standing figure's head dips by this frame (nodding along to the beat).
+  nod?: number;
 }
 
 // How a subject is moving this frame, worked out by the world from its motion.
@@ -422,7 +426,9 @@ export const FLYING = new Set<SubjectKind>(["bird", "bird_flock", "butterfly", "
 export const CELESTIAL = new Set<SubjectKind>(["big_moon", "big_sun", "planet", "rainbow"]);
 
 // Idle breathing alternates two frames; seeded so a group doesn't breathe in unison.
-const idleFrame = (c: SpriteCtx, seed: number) => Math.floor(c.t / 0.8 + seed);
+// On a beat grid it alternates once per footfall period instead, so a still crowd breathes in time.
+const idleFrame = (c: SpriteCtx, seed: number) =>
+  c.beat !== undefined ? Math.floor(c.pace / FOOTFALL_PACE + Math.floor(seed)) : Math.floor(c.t / 0.8 + seed);
 
 // A dance assembled from the sheet's authored frames (idle, spellcast, emote), with a bounce.
 const DANCE: [clip: CharDraw["clip"], frame: number, lift: number][] = [
@@ -486,7 +492,8 @@ export function drawSubject(
       return obj.carSide(c, x, y, s, alpha, seed, flip, moving);
     case "dancer": {
       const who = Math.floor(seed) % 2 ? c.cast.partner : lead;
-      const n = Math.floor(c.pace * 4.5 + seed);
+      // Two dance frames per footfall period, so on a beat-locked pace the bounce stays on the beat.
+      const n = Math.floor((c.pace * 2) / FOOTFALL_PACE + Math.floor(seed));
       const [clip, frame, lift] = DANCE[((n % DANCE.length) + DANCE.length) % DANCE.length];
       // Every other bar mirrors, so the dance sways side to side.
       const mirror = Math.floor(n / DANCE.length) % 2 === 1;

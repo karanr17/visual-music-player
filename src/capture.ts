@@ -1,4 +1,5 @@
 import { SongAnalysis } from "./analysis/schema";
+import { Rhythm, type Reactivity } from "./audio/rhythm";
 import { computeEnvelope, energyAt, energyIntegral, onsetAt, type Envelope } from "./audio/envelope";
 import { parseLrc, type Lyrics } from "./lyrics/lyrics";
 import { Captions, CH, CW } from "./render/captions";
@@ -18,6 +19,8 @@ export interface CaptureInput {
   audioUrl?: string;
   analysis?: unknown;
   title: string;
+  // Default "subtle"; "off" renders as the player did before beat reactivity.
+  reactivity?: Reactivity;
 }
 
 const COLORS: Record<string, string> = {
@@ -36,6 +39,7 @@ class Capture {
   private lyrics: Lyrics | null = null;
   private env: Envelope | null = null;
   private analysis: SongAnalysis | null = null;
+  private rhythm: Rhythm | null = null;
   private title = "";
   private captions = new Captions();
   private scene = Object.assign(document.createElement("canvas"), { width: PW, height: PH });
@@ -56,6 +60,8 @@ class Capture {
     this.lyrics = input.lrc ? { lines: parseLrc(input.lrc, duration), synced: true, source: "lrc-file", instrumental: false } : null;
     this.director = new Director(this.script, this.script.style);
     this.director.setEnergyIntegral((t) => energyIntegral(this.env, t));
+    this.rhythm = this.analysis ? new Rhythm(this.analysis) : null;
+    this.director.setRhythm(this.rhythm, input.reactivity ?? "subtle");
     return { sections: this.script.sections.length, duration };
   }
 
@@ -96,6 +102,15 @@ class Capture {
     if (this.analysis) {
       g.fillStyle = "rgba(255,255,255,0.45)";
       for (const d of this.analysis.downbeats) g.fillRect(x(d), CH + 35, 1, 3);
+    }
+    if (this.rhythm) {
+      // A metronome from the analysis's beat grid, to check the picture against: big on downbeats.
+      const r = this.rhythm;
+      const k = Math.max(Math.exp(-r.sinceDownbeat(t) / 0.15), 0.5 * Math.exp(-r.sinceBeat(t) / 0.15));
+      g.fillStyle = `rgba(255,214,120,${(0.15 + 0.85 * k).toFixed(3)})`;
+      g.beginPath();
+      g.arc(CW - 12, CH + 8, 3 + 3 * k, 0, Math.PI * 2);
+      g.fill();
     }
     g.fillStyle = "#fff";
     g.fillRect(x(t), CH + 15, 2, 26);

@@ -1,4 +1,5 @@
 import { DEFAULT_ANALYSIS_URL } from "./analysis/client";
+import type { Reactivity } from "./audio/rhythm";
 import type { Style } from "./scene/vocab";
 
 export type Provider = "auto" | "claude-code" | "claude" | "ollama" | "off";
@@ -16,6 +17,8 @@ export interface Settings {
   waitForScenes: boolean;
   // Off ignores every analysis source, which also gives a with/without comparison of a song.
   useAnalysis: boolean;
+  // How strongly the beat moves the picture; needs a beat grid from the audio analysis.
+  reactivity: Reactivity;
   // Base URL of music-connector's `mc serve`; empty means don't ask it for audio analysis.
   analysisUrl: string;
 }
@@ -56,6 +59,7 @@ const DEFAULTS: Settings = {
   referenceForScenes: true,
   waitForScenes: true,
   useAnalysis: true,
+  reactivity: "subtle",
   analysisUrl: DEFAULT_ANALYSIS_URL,
 };
 

@@ -1,7 +1,7 @@
 import type { CastSpec, SubjectSpec } from "../scene/schema";
 import type { Motion, Particles, Position, SceneEvent, Setting, Shot, SubjectKind } from "../scene/vocab";
 import { DEPTH_SETTINGS, drawBackdrop, groundY, HORIZON, type SceneCtx } from "./backdrops";
-import { STEP_PX } from "./characters";
+import { FOOTFALL_PACE as FOOTFALL, STEP_PX, WALK_V } from "./characters";
 import { clamp, H, K, lerp, mix, scale, smooth, W, type FB, type RGB } from "./fb";
 import { sceneLight } from "./lighting";
 import { hash1 } from "./noise";
@@ -45,6 +45,13 @@ export interface SceneState {
   // ∫ pace dt in "pace-seconds", where pace follows the music's energy. A pure function of t,
   // so anything paced by energy moves by integrating it and seeking lands on the same frame.
   pace: (t: number) => number;
+  // Set when pace is locked to the beat: moves a walk's start to the next pace at which its
+  // footfalls land on beats, so the figure starts in step instead of between beats.
+  stepAlign?: (pace: number) => number;
+  // Continuous beat count (whole at each beat) when the scene follows a beat grid.
+  beatPos?: (t: number) => number;
+  // Head dip in source pixels for standing figures this frame.
+  nod?: number;
 }
 
 // How fast the road scrolls during a moment (1 = driving). An empty road is the view from the
@@ -101,7 +108,7 @@ function cameraFor(setting: Setting, shot: Shot): { camY: number; tilt: number }
   return { camY, tilt: dFeet - camY };
 }
 
-interface Place {
+export interface Place {
   x: number;
   y: number;
   s: number;
@@ -165,16 +172,25 @@ const FOOTPRINT: Partial<Record<SubjectKind, number>> = {
 };
 const NO_SHADOW = new Set<SubjectKind>(["boat", "ship", "whale", "bridge", "train", "ladder", "chains", "heart", "broken_heart", "mask", "crown", "key", "letter", "clock", "phone"]);
 
-// Walking speed and distances are in world units (logical px at scale 1) and multiplied by the
-// subject's scale on screen, so a cut to a closer shot keeps the walk where it was. 13 px per
-// pace-second is about 9 walk frames a second with the sheet's step length.
-const WALK_V = 13;
+// Walking speed and distances are in world units (logical px at scale 1, WALK_V per pace-second)
+// and multiplied by the subject's scale on screen, so a cut to a closer shot keeps the walk where it was.
 // Road travel per walk frame when walking along a road (road speed ROAD_WALK is travel units/s).
 const ROAD_WALK = 0.22;
 const ROAD_STEP = ROAD_WALK / 9;
 // Seconds to get up to speed and to slow to a stop, and to turn round at the end of a walk.
 const ACCEL = 0.45;
 const TURN = 0.9;
+// On a beat grid, accelerating plus turning must take whole footfall periods, or each turn would
+// shift the steps off the beat.
+const TURN_ON_BEAT = Math.max(1, Math.round((ACCEL + TURN) / FOOTFALL)) * FOOTFALL - ACCEL;
+
+// Walk frames 0 and 4 are the footfalls; a cruising walk is at frame R·(u − ACCEL/2), R frames
+// per pace-second, so starting at a pace ≡ this offset puts footfalls on whole footfall periods.
+const STEP_OFFSET = -ACCEL / 2;
+
+export function alignStep(p0: number): number {
+  return STEP_OFFSET + FOOTFALL * Math.ceil((p0 - STEP_OFFSET) / FOOTFALL - 1e-9);
+}
 const SPAN = 60;
 
 // Distance covered after time u on a leg of length `len` walked at speed v, easing in and out
@@ -199,10 +215,11 @@ const stepLen = (s: number) => (STEP_PX * s) / K;
 // it landed instead of sliding forward while a frame holds.
 const onStep = (d: number, step: number) => Math.floor(d / step + 1e-6) * step;
 
-function applyMotion(sub: LiveSubject, pl: Place, s: number, st: SceneState, t: number, energy: number, floats: boolean, alongDepth: boolean): Motioned {
+export function applyMotion(sub: LiveSubject, pl: Place, s: number, st: SceneState, t: number, energy: number, floats: boolean, alongDepth: boolean): Motioned {
   const dt = Math.max(0, t - sub.since);
   // Pace-seconds since the motion began: elapsed time weighted by the music's energy.
-  const u = st.pace(t) - st.pace(sub.since);
+  const start = st.pace(sub.since);
+  const u = st.pace(t) - (st.stepAlign && sub.motion === "walk" ? st.stepAlign(start) : start);
   const walker = WALKERS.has(sub.kind);
   let { x, y } = pl;
   const gait: Gait = { dist: 0, moving: false, flip: false, age: dt, step: stepLen(s) };
@@ -219,12 +236,13 @@ function applyMotion(sub: LiveSubject, pl: Place, s: number, st: SceneState, t: 
       // Back and forth over SPAN so a long line doesn't walk the figure off screen, easing into
       // each turn and pausing to face round.
       const v = WALK_V;
+      const turn = st.stepAlign ? TURN_ON_BEAT : TURN;
       const legT = SPAN / v + ACCEL;
-      const period = 2 * (legT + TURN);
+      const period = 2 * (legT + turn);
       const n = Math.floor(u / period);
       const ph = u - n * period;
-      const back = ph >= legT + TURN;
-      const local = back ? ph - legT - TURN : ph;
+      const back = ph >= legT + turn;
+      const local = back ? ph - legT - turn : ph;
       const turning = local > legT;
       const d = leg(Math.min(local, legT), SPAN, v);
       const legsDone = n * 2 + (back ? 1 : 0);
@@ -235,7 +253,7 @@ function applyMotion(sub: LiveSubject, pl: Place, s: number, st: SceneState, t: 
       const facing = back ? -dir : dir;
       if (turning) {
         // Side, then facing us, then the other side.
-        const k = (local - legT) / TURN;
+        const k = (local - legT) / turn;
         gait.front = k > 0.3 && k < 0.7;
         gait.flip = (k >= 0.7 ? -facing : facing) < 0;
       } else {
@@ -251,7 +269,8 @@ function applyMotion(sub: LiveSubject, pl: Place, s: number, st: SceneState, t: 
       y += 30 * (1 - Math.exp(-u * 0.2));
       break;
     case "sway":
-      x += Math.sin(t * 1.5 + sub.seed) * 2 * (0.6 + energy * 0.8);
+      // One sway every two beats when there is a beat; otherwise a slow free sway.
+      x += Math.sin(st.beatPos ? Math.PI * st.beatPos(t) + sub.seed : t * 1.5 + sub.seed) * 2 * (0.6 + energy * 0.8);
       break;
     case "fly":
       x += Math.sin(t * 0.3 + sub.seed) * 30;
@@ -316,13 +335,14 @@ export function renderScene(fb: FB, st: SceneState, t: number, energy: number): 
   const layer = (s: LiveSubject) => (CELESTIAL.has(s.kind) ? 0 : s.kind === "crowd" ? 1 : st.shot === "close" && s.focus ? 3 : 2);
   const ordered = [...st.subjects].sort((a, b) => layer(a) - layer(b));
   const pace = st.pace(t);
+  const beat = st.beatPos?.(t);
   const drawOne = (sub: LiveSubject, pl: Place, pos: Position, alpha: number, glide: { dist: number; face: number; moving: boolean } | null) => {
     const onGround = grounded(sub, pos);
     const alongDepth = onGround && DEPTH_SETTINGS.has(st.setting) && (st.setting === "road" || !WALKERS.has(sub.kind));
     const far = pl.s < 1 || pos === "far";
     const sc: SpriteCtx = {
       fb, pal: p.pal, t, energy, ink: pl.ink, lights: p.lights, daylight: p.daylight, sprites: st.sprites, alongDepth,
-      light, haze: far ? 0.45 : 0, hazeCol: mix(p.pal.far, p.pal.skyBot, 0.4), cast: st.cast, pace,
+      light, haze: far ? 0.45 : 0, hazeCol: mix(p.pal.far, p.pal.skyBot, 0.4), cast: st.cast, pace, beat, nod: st.nod,
     };
     // In a close shot the focus subject (or every ground subject, if none is marked) steps up to
     // the camera; the cut in or out eases rather than pops.
