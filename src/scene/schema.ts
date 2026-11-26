@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
   AGES, CAMERAS, EVENTS, GENDERS, HAIRSTYLES, MOODS, MOTIONS, OUTFITS, PARTICLES, POSITIONS, SECTION_LABELS,
-  SETTINGS, STYLES, SUBJECTS, TIMES, TRANSITIONS, WEATHERS,
+  SETTINGS, SHOTS, STYLES, SUBJECTS, TIMES, TRANSITIONS, WEATHERS,
 } from "./vocab";
 
 // kind "custom" names a sprite the model drew (see sprites); "" otherwise.
@@ -58,6 +58,7 @@ export const ModelOutput = z.object({
       moments: z.array(
         z.object({
           line: z.number().int(),
+          shot: z.enum(SHOTS),
           subjects: z.array(Subject),
           particles: z.enum(PARTICLES),
           event: z.enum(EVENTS),
@@ -74,8 +75,10 @@ export type ModelOutput = z.infer<typeof ModelOutput>;
 // Stored subjects tolerate the fields older cached scripts don't have.
 const StoredSubject = Subject.extend({ custom: z.string().optional(), focus: z.boolean().optional() });
 
+// shot is optional for scripts cached before it existed; the renderer defaults to medium.
 const Moment = z.object({
   t: z.number(),
+  shot: z.enum(SHOTS).optional(),
   subjects: z.array(StoredSubject),
   particles: z.enum(PARTICLES),
   event: z.enum(EVENTS),

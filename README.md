@@ -6,6 +6,12 @@ drives how alive the scene is. The design and roadmap live in [SPEC.md](SPEC.md)
 
 Static site: Vite + TypeScript, no UI framework, no backend.
 
+![Before and after: the ?demo reel on main (left) and with sprite-sheet people, shot framing and a caption-safe area (right)](docs/before-after.gif)
+
+*Left: `main` before Phase 1. Right: sprite-sheet people with planted feet, shot framing, and
+subjects kept above the captions and player bar. Both sides are `?demo&t=…&freeze` frames at
+12 fps.*
+
 ## Features
 
 - Local-file playback: drag-drop audio files (and `.lrc` sidecars) or remember a folder.
@@ -15,6 +21,10 @@ Static site: Vite + TypeScript, no UI framework, no backend.
   closed vocabulary so every scene is drawable, and cached per song and model.
 - 13 looks (natural, synthwave, lo-fi, noir, storybook, Game Boy, ukiyo-e, …), or a palette taken from
   a reference image.
+- People drawn from LPC sprite sheets (walk, idle, sit, reach and dance cycles), recoloured from the
+  song's cast, with feet that stay planted while walking.
+- A shot per lyric line (wide, medium or close) that sets subject size and where the horizon sits,
+  and keeps people above the captions and player bar.
 - Kinetic pixel captions, section transitions, and a JSON scene editor with export/import.
 - A built-in `?demo` showcase that needs no audio files and no LLM.
 
@@ -40,6 +50,7 @@ Other scripts:
 | `npm run build` | typecheck, then a static build into `dist/` |
 | `npm run preview` | serve the built `dist/` |
 | `scripts/check-secrets.sh` | the no-secrets check CI runs (add `--history` to scan every commit) |
+| `node scripts/build-characters.mjs <lpc>` | rebuild the character atlas from a checkout of the LPC generator (see [CREDITS.md](CREDITS.md)) |
 
 ## The `?demo` showcase
 
@@ -90,6 +101,8 @@ fails the build if an API key pattern, an email address, an env file, or a liste
 | `E` | open the scene editor |
 | `[` / `]` | lyric offset −/+ 0.1 s |
 
-## License
+## License and credits
 
-[MIT](LICENSE).
+Code: [MIT](LICENSE). The character sprites are third-party art under their own licences (OGA-BY
+3.0, CC-BY 3.0 or CC0) by the Liberated Pixel Cup artists; see [CREDITS.md](CREDITS.md) for the
+authors, licences and per-file credits.

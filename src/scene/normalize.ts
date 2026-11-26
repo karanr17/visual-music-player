@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ModelOutput, type AppearanceSpec, type CastSpec } from "./schema";
 import {
   AGES, CAMERAS, EVENTS, GENDERS, HAIRSTYLES, MOODS, MOTIONS, OUTFITS, PARTICLES, POSITIONS, SECTION_LABELS,
-  SETTINGS, STYLES, SUBJECTS, TIMES, TRANSITIONS, WEATHERS,
+  SETTINGS, SHOTS, STYLES, SUBJECTS, TIMES, TRANSITIONS, WEATHERS,
 } from "./vocab";
 
 // JSON schema for structured outputs, built by hand from the zod schema. The SDK's zod
@@ -126,6 +126,7 @@ export function normalizeOutput(raw: unknown, librarySprites: string[] = []): { 
           .filter(isRec)
           .map((m) => ({
             line: Math.round(num(m.line, 0)),
+            shot: pick(SHOTS, m.shot, "medium", misses),
             subjects: arr(m.subjects)
               .filter(isRec)
               .flatMap((x) => {

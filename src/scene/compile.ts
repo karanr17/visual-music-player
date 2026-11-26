@@ -44,13 +44,14 @@ export function compile(
       .filter((m) => m.line >= s.fromLine && m.line <= s.toLine)
       .map((m) => ({
         t: lineTimes[m.line] ?? start,
+        shot: m.shot,
         subjects: m.subjects.slice(0, 5),
         particles: m.particles,
         event: m.event,
         intensity: clamp(m.intensity, 0, 1),
       }))
       .sort((a, b) => a.t - b.t);
-    if (!moments.length) moments.push({ t: start, subjects: [], particles: "none", event: "none", intensity: 0.4 });
+    if (!moments.length) moments.push({ t: start, shot: "wide", subjects: [], particles: "none", event: "none", intensity: 0.4 });
     return {
       label: s.label,
       start,
@@ -122,7 +123,7 @@ export function ambientScript(track: Track, env: Envelope | null, trackKey: stri
         },
         transitionIn: "fade_black",
         transitionDuration: 2,
-        moments: [{ t: 0, subjects: [], particles: avg > 0.5 ? "sparkles" : "fireflies", event: "none", intensity: avg }],
+        moments: [{ t: 0, shot: "wide", subjects: [], particles: avg > 0.5 ? "sparkles" : "fireflies", event: "none", intensity: avg }],
       },
     ],
     unmapped: [],

@@ -6,7 +6,7 @@ import { lerpParams, worldParams, type WorldParams } from "./palette";
 import { DEFAULT_CAST } from "../scene/normalize";
 import { PALETTE_LOOKS, postProcess, type Look } from "./style";
 import { compileSprite, type CustomSprite } from "./sprites";
-import { renderScene, travelSpeed, type LiveSubject, type RenderOut, type SceneState } from "./world";
+import { renderScene, SHOT_EASE, travelSpeed, type LiveSubject, type RenderOut, type SceneState } from "./world";
 
 const FADE_IN = 0.6;
 const FADE_OUT = 0.6;
@@ -72,6 +72,9 @@ export class Director {
   private dissolveMs = 350;
   private lastT = -1;
   private frameNo = 0;
+  // ∫₀ᵗ energy dτ for the playing track; the default assumes a steady mid level.
+  private energyInt: (t: number) => number = (t) => 0.4 * t;
+  private pace = (t: number) => 0.6 * t + 0.8 * this.energyInt(t);
   readonly out = new FB();
 
   constructor(
@@ -93,6 +96,10 @@ export class Director {
     for (let i = 1; i < script.sections.length; i++) this.travelBase.push(this.travelBase[i - 1] + this.travelIn(i - 1, script.sections[i].start));
   }
 
+
+  setEnergyIntegral(fn: (t: number) => number): void {
+    this.energyInt = fn;
+  }
 
   // Dissolves from whatever is on screen now into whatever renders next (seeks, script swaps).
   dissolveIn(ms: number): void {
@@ -243,6 +250,11 @@ export class Director {
       sprites: this.sprites,
       backlight: !PALETTE_LOOKS.has(this.style),
       cast: this.script.cast ?? DEFAULT_CAST,
+      // A section's first moment arrives with the section transition, so it doesn't ease in.
+      shot: m.shot ?? "medium",
+      fromShot: prev ? (prev.shot ?? "medium") : (m.shot ?? "medium"),
+      shotSince: since,
+      pace: this.pace,
     };
   }
 
@@ -287,6 +299,11 @@ export class Director {
       sprites: this.sprites,
       backlight: !PALETTE_LOOKS.has(this.style),
       cast: this.script.cast ?? DEFAULT_CAST,
+      // The framing moves from A's shot to B's over the blend.
+      shot: B.shot,
+      fromShot: A.shot,
+      shotSince: k * SHOT_EASE,
+      pace: this.pace,
     };
   }
 

@@ -13,19 +13,21 @@ export interface SceneCtx {
   seed: number;
   // Distance travelled along a road; advances only while something on it is moving.
   travel: number;
+  // Vertical shift applied to every layer alike, placing the horizon for the shot.
+  tilt: number;
 }
 
 export const HORIZON = 112;
 
 // Vertical camera offset applied with parallax: distant layers move less when the camera tilts.
-const Y = (c: SceneCtx, y: number, depth: number) => y + c.camY * depth;
+const Y = (c: SceneCtx, y: number, depth: number) => y + c.camY * depth + c.tilt;
 const X = (c: SceneCtx, x: number, depth: number) => x + c.camX * depth;
 
 function skyGradient(c: SceneCtx, top: RGB, bot: RGB, horizon: number, clip?: [number, number, number, number]): void {
   const { fb } = c;
   const [cx0, cy0, cx1, cy1] = (clip ?? [0, 0, W, H]).map((v) => Math.round(v * K));
   const steps = 14 * K;
-  const off = c.camY * 0.5;
+  const off = c.camY * 0.5 + c.tilt;
   for (let py = cy0; py < cy1; py++) {
     let f = (py / K - off) / Math.max(1, horizon);
     const above = f < 0 ? clamp(-f) : 0;
@@ -308,7 +310,7 @@ const SETTINGS: Record<Setting, SettingDraw> = {
       Math.max(0, Math.floor(wx)), Math.max(0, Math.floor(wy)), Math.min(W, Math.floor(wx + ww)), Math.min(H, Math.floor(wy + wh)),
     ];
     if (clip[2] > clip[0] && clip[3] > clip[1]) {
-      skyGradient(c, c.p.pal.skyTop, c.p.pal.skyBot, wy + wh - c.camY * 0.5, clip);
+      skyGradient(c, c.p.pal.skyTop, c.p.pal.skyBot, wy + wh - c.camY * 0.5 - c.tilt, clip);
       for (let i = 0; i < 40 * c.p.stars; i++) {
         const sx = clip[0] + hash1(i + c.seed) * (clip[2] - clip[0]);
         const sy = clip[1] + hash1(i * 3 + c.seed) * (clip[3] - clip[1]) * 0.7;

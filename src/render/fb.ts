@@ -60,6 +60,11 @@ export class FB {
     this.data[py * PW + px] = v;
   }
 
+  // A size x size square of physical pixels with its top-left corner at (px, py).
+  block(px: number, py: number, size: number, v: number, alpha = 1): void {
+    for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) this.dot(px + dx, py + dy, v, alpha);
+  }
+
   // One logical pixel, placed with physical (sub-logical) precision.
   px(x: number, y: number, c: number, alpha = 1): void {
     const x0 = Math.floor(x * K);
