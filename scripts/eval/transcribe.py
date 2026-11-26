@@ -36,6 +36,10 @@ for k in range(0, len(y), WINDOW_S * sr):
         chunk[0][0] = chunk[1][0] - 0.4
     words.extend(chunk)
 
+# Whisper sometimes loops on a phrase, emitting dozens of copies stamped within milliseconds of
+# each other. A word that starts almost exactly when the previous one did is one of those.
+words = [w for i, w in enumerate(words) if i == 0 or w[0] - words[i - 1][0] > 0.08]
+
 PRONOUN_I = {"I", "I'm", "I've", "I'll", "I'd"}
 
 
@@ -54,4 +58,11 @@ for w in words:
     cur.append(w)
 if cur:
     lines.append(cur)
-json.dump([{"t": round(l[0][0], 2), "text": " ".join(w[2] for w in l)} for l in lines if len(l) > 1], sys.stdout, indent=1)
+out = []
+for l in lines:
+    text = " ".join(w[2] for w in l)
+    # The same line again within a second and a half is the loop's tail, not a sung repeat.
+    if len(l) < 2 or (out and out[-1]["text"] == text and l[0][0] - out[-1]["t"] < 1.5):
+        continue
+    out.append({"t": round(l[0][0], 2), "text": text})
+json.dump(out, sys.stdout, indent=1)

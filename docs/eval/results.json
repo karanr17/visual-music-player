@@ -1,0 +1,686 @@
+{
+ "baseline": {
+  "songs": 10,
+  "failures": 0,
+  "directorFallbacks": 0,
+  "judge": {
+   "fit": {
+    "mean": 6.3,
+    "sd": 1.08
+   },
+   "structure": {
+    "mean": 6,
+    "sd": 1.08
+   },
+   "variety": {
+    "mean": 4.35,
+    "sd": 1.42
+   },
+   "render": {
+    "mean": 5.85,
+    "sd": 1.09
+   }
+  },
+  "overall": {
+   "mean": 5.63,
+   "sdAcrossSongs": 0.92,
+   "meanSampleGap": 0.4
+  },
+  "metrics": {
+   "sections": 12.7,
+   "settings": 4.8,
+   "emptyMoments": 0,
+   "subjectsPerMoment": 2.06,
+   "shotChanges": 0.59,
+   "closeShare": 0.19,
+   "unmapped": 1.4,
+   "sprites": 0
+  },
+  "apiEquivalentUsdPerSong": 0.02,
+  "secondsPerSong": 128.6,
+  "perSong": {
+   "24664": {
+    "scores": {
+     "fit": [
+      7,
+      7
+     ],
+     "structure": [
+      7,
+      6
+     ],
+     "variety": [
+      6,
+      6
+     ],
+     "render": [
+      6,
+      6
+     ]
+    },
+    "metrics": {
+     "sections": 11,
+     "settings": 5,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 2.259259259259259,
+     "shotChanges": 0.6226415094339622,
+     "closeShare": 0.18518518518518517,
+     "unmapped": 4,
+     "sprites": 0
+    }
+   },
+   "27962": {
+    "scores": {
+     "fit": [
+      7,
+      7
+     ],
+     "structure": [
+      7,
+      6
+     ],
+     "variety": [
+      6,
+      6
+     ],
+     "render": [
+      8,
+      8
+     ]
+    },
+    "metrics": {
+     "sections": 10,
+     "settings": 4,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 2.0357142857142856,
+     "shotChanges": 0.7777777777777778,
+     "closeShare": 0.35714285714285715,
+     "unmapped": 4,
+     "sprites": 0
+    }
+   },
+   "29329": {
+    "scores": {
+     "fit": [
+      4,
+      3
+     ],
+     "structure": [
+      6,
+      5
+     ],
+     "variety": [
+      3,
+      2
+     ],
+     "render": [
+      5,
+      4
+     ]
+    },
+    "metrics": {
+     "sections": 15,
+     "settings": 5,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.2685950413223142,
+     "shotChanges": 0.27385892116182575,
+     "closeShare": 0.08264462809917356,
+     "unmapped": 1,
+     "sprites": 0
+    }
+   },
+   "31981": {
+    "scores": {
+     "fit": [
+      6,
+      6
+     ],
+     "structure": [
+      7,
+      7
+     ],
+     "variety": [
+      5,
+      6
+     ],
+     "render": [
+      6,
+      7
+     ]
+    },
+    "metrics": {
+     "sections": 15,
+     "settings": 5,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.5416666666666667,
+     "shotChanges": 0.7446808510638298,
+     "closeShare": 0.22916666666666666,
+     "unmapped": 0,
+     "sprites": 0
+    }
+   },
+   "38880": {
+    "scores": {
+     "fit": [
+      6,
+      6
+     ],
+     "structure": [
+      6,
+      6
+     ],
+     "variety": [
+      3,
+      3
+     ],
+     "render": [
+      5,
+      5
+     ]
+    },
+    "metrics": {
+     "sections": 11,
+     "settings": 4,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 2.4415584415584415,
+     "shotChanges": 0.5657894736842105,
+     "closeShare": 0.09090909090909091,
+     "unmapped": 0,
+     "sprites": 0
+    }
+   },
+   "39570": {
+    "scores": {
+     "fit": [
+      7,
+      7
+     ],
+     "structure": [
+      7,
+      6
+     ],
+     "variety": [
+      6,
+      6
+     ],
+     "render": [
+      7,
+      6
+     ]
+    },
+    "metrics": {
+     "sections": 10,
+     "settings": 5,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 2.55,
+     "shotChanges": 0.5128205128205128,
+     "closeShare": 0.1,
+     "unmapped": 0,
+     "sprites": 0
+    }
+   },
+   "43036": {
+    "scores": {
+     "fit": [
+      7,
+      7
+     ],
+     "structure": [
+      4,
+      5
+     ],
+     "variety": [
+      3,
+      3
+     ],
+     "render": [
+      6,
+      6
+     ]
+    },
+    "metrics": {
+     "sections": 22,
+     "settings": 8,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 2.0103092783505154,
+     "shotChanges": 0.38860103626943004,
+     "closeShare": 0.13917525773195877,
+     "unmapped": 2,
+     "sprites": 0
+    }
+   },
+   "44932": {
+    "scores": {
+     "fit": [
+      6,
+      7
+     ],
+     "structure": [
+      4,
+      5
+     ],
+     "variety": [
+      4,
+      4
+     ],
+     "render": [
+      5,
+      6
+     ]
+    },
+    "metrics": {
+     "sections": 13,
+     "settings": 4,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 2.6666666666666665,
+     "shotChanges": 0.6746987951807228,
+     "closeShare": 0.21428571428571427,
+     "unmapped": 0,
+     "sprites": 0
+    }
+   },
+   "57378": {
+    "scores": {
+     "fit": [
+      6,
+      7
+     ],
+     "structure": [
+      8,
+      7
+     ],
+     "variety": [
+      4,
+      5
+     ],
+     "render": [
+      6,
+      6
+     ]
+    },
+    "metrics": {
+     "sections": 10,
+     "settings": 5,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.8035714285714286,
+     "shotChanges": 0.7090909090909091,
+     "closeShare": 0.39285714285714285,
+     "unmapped": 3,
+     "sprites": 0
+    }
+   },
+   "62227": {
+    "scores": {
+     "fit": [
+      7,
+      6
+     ],
+     "structure": [
+      5,
+      6
+     ],
+     "variety": [
+      3,
+      3
+     ],
+     "render": [
+      5,
+      4
+     ]
+    },
+    "metrics": {
+     "sections": 10,
+     "settings": 3,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 2.0215827338129495,
+     "shotChanges": 0.6666666666666666,
+     "closeShare": 0.15827338129496402,
+     "unmapped": 0,
+     "sprites": 0
+    }
+   }
+  }
+ },
+ "two-v1": {
+  "songs": 10,
+  "failures": 0,
+  "directorFallbacks": 0,
+  "judge": {
+   "fit": {
+    "mean": 5.9,
+    "sd": 1.29
+   },
+   "structure": {
+    "mean": 6,
+    "sd": 1.17
+   },
+   "variety": {
+    "mean": 4.8,
+    "sd": 1.2
+   },
+   "render": {
+    "mean": 5.35,
+    "sd": 1.6
+   }
+  },
+  "overall": {
+   "mean": 5.51,
+   "sdAcrossSongs": 1.16,
+   "meanSampleGap": 0.17
+  },
+  "metrics": {
+   "sections": 12.1,
+   "settings": 4.5,
+   "emptyMoments": 0,
+   "subjectsPerMoment": 1.88,
+   "shotChanges": 0.74,
+   "closeShare": 0.14,
+   "unmapped": 7.6,
+   "sprites": 0
+  },
+  "apiEquivalentUsdPerSong": 0.139,
+  "secondsPerSong": 131,
+  "perSong": {
+   "24664": {
+    "scores": {
+     "fit": [
+      5,
+      5
+     ],
+     "structure": [
+      7,
+      7
+     ],
+     "variety": [
+      6,
+      6
+     ],
+     "render": [
+      7,
+      6
+     ]
+    },
+    "metrics": {
+     "sections": 11,
+     "settings": 3,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.7962962962962963,
+     "shotChanges": 0.6792452830188679,
+     "closeShare": 0.14814814814814814,
+     "unmapped": 12,
+     "sprites": 0
+    }
+   },
+   "27962": {
+    "scores": {
+     "fit": [
+      6,
+      6
+     ],
+     "structure": [
+      6,
+      7
+     ],
+     "variety": [
+      6,
+      6
+     ],
+     "render": [
+      7,
+      6
+     ]
+    },
+    "metrics": {
+     "sections": 11,
+     "settings": 3,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 3.7142857142857144,
+     "shotChanges": 0.6666666666666666,
+     "closeShare": 0.21428571428571427,
+     "unmapped": 9,
+     "sprites": 0
+    }
+   },
+   "29329": {
+    "scores": {
+     "fit": [
+      4,
+      3
+     ],
+     "structure": [
+      4,
+      4
+     ],
+     "variety": [
+      3,
+      3
+     ],
+     "render": [
+      2,
+      3
+     ]
+    },
+    "metrics": {
+     "sections": 15,
+     "settings": 5,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.462809917355372,
+     "shotChanges": 0.6846473029045643,
+     "closeShare": 0.17355371900826447,
+     "unmapped": 8,
+     "sprites": 0
+    }
+   },
+   "31981": {
+    "scores": {
+     "fit": [
+      7,
+      7
+     ],
+     "structure": [
+      6,
+      6
+     ],
+     "variety": [
+      6,
+      5
+     ],
+     "render": [
+      7,
+      6
+     ]
+    },
+    "metrics": {
+     "sections": 13,
+     "settings": 4,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.7083333333333333,
+     "shotChanges": 0.7446808510638298,
+     "closeShare": 0.1875,
+     "unmapped": 4,
+     "sprites": 0
+    }
+   },
+   "38880": {
+    "scores": {
+     "fit": [
+      4,
+      4
+     ],
+     "structure": [
+      4,
+      4
+     ],
+     "variety": [
+      4,
+      4
+     ],
+     "render": [
+      3,
+      4
+     ]
+    },
+    "metrics": {
+     "sections": 12,
+     "settings": 6,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.9090909090909092,
+     "shotChanges": 0.8552631578947368,
+     "closeShare": 0.07792207792207792,
+     "unmapped": 15,
+     "sprites": 0
+    }
+   },
+   "39570": {
+    "scores": {
+     "fit": [
+      7,
+      7
+     ],
+     "structure": [
+      7,
+      6
+     ],
+     "variety": [
+      6,
+      6
+     ],
+     "render": [
+      7,
+      7
+     ]
+    },
+    "metrics": {
+     "sections": 9,
+     "settings": 5,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.775,
+     "shotChanges": 0.717948717948718,
+     "closeShare": 0.175,
+     "unmapped": 6,
+     "sprites": 0
+    }
+   },
+   "43036": {
+    "scores": {
+     "fit": [
+      6,
+      6
+     ],
+     "structure": [
+      7,
+      6
+     ],
+     "variety": [
+      4,
+      4
+     ],
+     "render": [
+      5,
+      5
+     ]
+    },
+    "metrics": {
+     "sections": 17,
+     "settings": 6,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.097938144329897,
+     "shotChanges": 0.6787564766839378,
+     "closeShare": 0.061855670103092786,
+     "unmapped": 7,
+     "sprites": 0
+    }
+   },
+   "44932": {
+    "scores": {
+     "fit": [
+      6,
+      7
+     ],
+     "structure": [
+      6,
+      5
+     ],
+     "variety": [
+      4,
+      4
+     ],
+     "render": [
+      5,
+      5
+     ]
+    },
+    "metrics": {
+     "sections": 13,
+     "settings": 4,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.4166666666666667,
+     "shotChanges": 0.9036144578313253,
+     "closeShare": 0.09523809523809523,
+     "unmapped": 5,
+     "sprites": 0
+    }
+   },
+   "57378": {
+    "scores": {
+     "fit": [
+      7,
+      7
+     ],
+     "structure": [
+      7,
+      7
+     ],
+     "variety": [
+      6,
+      6
+     ],
+     "render": [
+      7,
+      7
+     ]
+    },
+    "metrics": {
+     "sections": 10,
+     "settings": 5,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 1.8035714285714286,
+     "shotChanges": 0.7818181818181819,
+     "closeShare": 0.23214285714285715,
+     "unmapped": 8,
+     "sprites": 0
+    }
+   },
+   "62227": {
+    "scores": {
+     "fit": [
+      7,
+      7
+     ],
+     "structure": [
+      7,
+      7
+     ],
+     "variety": [
+      3,
+      4
+     ],
+     "render": [
+      4,
+      4
+     ]
+    },
+    "metrics": {
+     "sections": 10,
+     "settings": 4,
+     "emptyMoments": 0,
+     "subjectsPerMoment": 2.093525179856115,
+     "shotChanges": 0.6376811594202898,
+     "closeShare": 0.04316546762589928,
+     "unmapped": 2,
+     "sprites": 0
+    }
+   }
+  }
+ }
+}
