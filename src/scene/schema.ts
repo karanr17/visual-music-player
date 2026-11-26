@@ -111,6 +111,8 @@ export const SceneScript = z.object({
   model: z.string().optional(),
   sprites: z.array(Sprite).optional(),
   cast: Cast.optional(),
+  // The director pass's reading of the song, kept for the editor and for comparing runs.
+  direction: z.object({ logline: z.string(), arc: z.string(), model: z.string() }).optional(),
 });
 export type SceneScript = z.infer<typeof SceneScript>;
 export type Section = SceneScript["sections"][number];

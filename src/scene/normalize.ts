@@ -33,7 +33,8 @@ function pick<T extends string>(allowed: readonly T[], v: unknown, fallback: T, 
   if (typeof v !== "string") return fallback;
   const norm = v.trim().toLowerCase().replace(/[\s-]+/g, "_");
   if ((allowed as readonly string[]).includes(norm)) return norm as T;
-  const partial = allowed.find((a) => norm.includes(a) || a.includes(norm));
+  // The longest match wins, so "lighthouse_beam" becomes a lighthouse, not a house.
+  const partial = allowed.filter((a) => norm.includes(a) || a.includes(norm)).sort((x, y) => y.length - x.length)[0];
   if (partial && norm.length >= 3) return partial;
   misses.push(v.trim().toLowerCase());
   return fallback;
@@ -100,6 +101,46 @@ export function normalizeCast(v: unknown, misses: string[] = []): CastSpec {
   };
 }
 
+export function normalizeWorld(v: unknown, misses: string[]): ModelOutput["sections"][number]["world"] {
+  const w = isRec(v) ? v : {};
+  return {
+    setting: pick(SETTINGS, w.setting, "field", misses),
+    timeOfDay: pick(TIMES, w.timeOfDay, "night", misses),
+    weather: pick(WEATHERS, w.weather, "clear", misses),
+    mood: pick(MOODS, w.mood, "serene", misses),
+    camera: pick(CAMERAS, w.camera, "drift", misses),
+  };
+}
+
+export type MomentOut = ModelOutput["sections"][number]["moments"][number];
+
+// `known`: sprite names a "custom" subject may refer to.
+export function normalizeMoment(m: Rec, known: Set<string>, misses: string[]): MomentOut {
+  return {
+    line: Math.round(num(m.line, 0)),
+    shot: pick(SHOTS, m.shot, "medium", misses),
+    subjects: arr(m.subjects)
+      .filter(isRec)
+      .flatMap((x) => {
+        const before = misses.length;
+        const kind = pick(SUBJECTS, x.kind, "lone_figure", misses);
+        // An unknown subject is dropped rather than silently turned into a figure.
+        if (misses.length > before) return [];
+        const custom = kind === "custom" ? spriteName(String(x.custom ?? "")) : "";
+        if (kind === "custom" && !known.has(custom)) {
+          if (custom) misses.push(custom);
+          return [];
+        }
+        return [{ kind, custom, position: pick(POSITIONS, x.position, "center", misses), motion: pick(MOTIONS, x.motion, "still", misses), focus: x.focus === true }];
+      }),
+    particles: pick(PARTICLES, m.particles, "none", misses),
+    event: pick(EVENTS, m.event, "none", misses),
+    intensity: Math.max(0, Math.min(1, num(m.intensity, 0.5))),
+  };
+}
+
+export { isRec, arr, num, pick, normalizeSprites };
+
 // librarySprites: names of previously drawn sprites the model may reuse without redrawing.
 export function normalizeOutput(raw: unknown, librarySprites: string[] = []): { output: ModelOutput; repaired: string[] } {
   const misses: string[] = [];
@@ -108,45 +149,14 @@ export function normalizeOutput(raw: unknown, librarySprites: string[] = []): { 
   const known = new Set([...sprites.map((s) => s.name), ...librarySprites]);
   const sections = arr(r.sections)
     .filter(isRec)
-    .map((s) => {
-      const w = isRec(s.world) ? s.world : {};
-      return {
-        label: pick(SECTION_LABELS, s.label, "verse", misses),
-        fromLine: Math.round(num(s.fromLine, 0)),
-        toLine: Math.round(num(s.toLine, num(s.fromLine, 0))),
-        world: {
-          setting: pick(SETTINGS, w.setting, "field", misses),
-          timeOfDay: pick(TIMES, w.timeOfDay, "night", misses),
-          weather: pick(WEATHERS, w.weather, "clear", misses),
-          mood: pick(MOODS, w.mood, "serene", misses),
-          camera: pick(CAMERAS, w.camera, "drift", misses),
-        },
-        transitionIn: pick(TRANSITIONS, s.transitionIn, "dissolve", misses),
-        moments: arr(s.moments)
-          .filter(isRec)
-          .map((m) => ({
-            line: Math.round(num(m.line, 0)),
-            shot: pick(SHOTS, m.shot, "medium", misses),
-            subjects: arr(m.subjects)
-              .filter(isRec)
-              .flatMap((x) => {
-                const before = misses.length;
-                const kind = pick(SUBJECTS, x.kind, "lone_figure", misses);
-                // An unknown subject is dropped rather than silently turned into a figure.
-                if (misses.length > before) return [];
-                const custom = kind === "custom" ? spriteName(String(x.custom ?? "")) : "";
-                if (kind === "custom" && !known.has(custom)) {
-                  if (custom) misses.push(custom);
-                  return [];
-                }
-                return [{ kind, custom, position: pick(POSITIONS, x.position, "center", misses), motion: pick(MOTIONS, x.motion, "still", misses), focus: x.focus === true }];
-              }),
-            particles: pick(PARTICLES, m.particles, "none", misses),
-            event: pick(EVENTS, m.event, "none", misses),
-            intensity: Math.max(0, Math.min(1, num(m.intensity, 0.5))),
-          })),
-      };
-    });
+    .map((s) => ({
+      label: pick(SECTION_LABELS, s.label, "verse", misses),
+      fromLine: Math.round(num(s.fromLine, 0)),
+      toLine: Math.round(num(s.toLine, num(s.fromLine, 0))),
+      world: normalizeWorld(s.world, misses),
+      transitionIn: pick(TRANSITIONS, s.transitionIn, "dissolve", misses),
+      moments: arr(s.moments).filter(isRec).map((m) => normalizeMoment(m, known, misses)),
+    }));
   if (!sections.length) throw new Error("Scene script had no sections");
   const unmapped = arr(r.unmapped).filter((u): u is string => typeof u === "string");
   return {

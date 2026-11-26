@@ -606,6 +606,13 @@ export class App {
           <label>Claude model (used by both the subscription and the API key)
             <select name="model">${CLAUDE_MODELS.map((m) => `<option value="${m.id}" ${m.id === s.model ? "selected" : ""}>${m.label}</option>`).join("")}</select>
           </label>
+          <label class="check"><input type="checkbox" name="twoPass" ${s.twoPass ? "checked" : ""}> Plan first: a director model reads the song and plans the sections and shots, then the model above draws the moments from the plan</label>
+          <div class="row">
+            <label>Director model (Claude)
+              <select name="directorModel">${CLAUDE_MODELS.map((m) => `<option value="${m.id}" ${m.id === s.directorModel ? "selected" : ""}>${m.label}</option>`).join("")}</select>
+            </label>
+            <label>Director model (Ollama) <input name="ollamaDirectorModel" value="${esc(s.ollamaDirectorModel)}" placeholder="same as below"></label>
+          </div>
           <div class="row">
             <label>Ollama URL <input name="ollamaUrl" value="${esc(s.ollamaUrl)}"></label>
             <label>Ollama model <input name="ollamaModel" value="${esc(s.ollamaModel)}"></label>
@@ -675,6 +682,9 @@ export class App {
         waitForScenes: f.get("waitForScenes") === "on",
         referenceForScenes: f.get("referenceForScenes") === "on",
         analysisUrl: String(f.get("analysisUrl") ?? "").trim(),
+        twoPass: f.get("twoPass") === "on",
+        directorModel: String(f.get("directorModel") ?? getSettings().directorModel),
+        ollamaDirectorModel: String(f.get("ollamaDirectorModel") ?? "").trim(),
         useAnalysis: f.get("useAnalysis") === "on",
       });
     };
@@ -686,9 +696,12 @@ export class App {
         const file = t.files?.[0];
         if (file) void this.chooseReference(file).then(() => d.close());
       } else {
-        const before = getSettings().referenceForScenes;
+        const before = getSettings();
         save();
-        if (before !== getSettings().referenceForScenes && getSettings().styleOverride === "reference" && this.current) void this.scenes.switchModel(this.current.track);
+        const now = getSettings();
+        const refChanged = before.referenceForScenes !== now.referenceForScenes && now.styleOverride === "reference";
+        const directorChanged = before.twoPass !== now.twoPass || before.directorModel !== now.directorModel || before.ollamaDirectorModel !== now.ollamaDirectorModel;
+        if ((refChanged || directorChanged) && this.current) void this.scenes.switchModel(this.current.track);
       }
     });
     d.querySelector("[data-regen]")?.addEventListener("click", async () => {
