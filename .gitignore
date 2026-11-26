@@ -1,0 +1,9 @@
+node_modules
+dist
+.env*
+*.mp3
+*.flac
+*.wav
+*.m4a
+*.lrc
+.DS_Store
