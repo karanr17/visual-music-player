@@ -100,6 +100,9 @@ export const SceneScript = z.object({
         transitionIn: z.enum(TRANSITIONS),
         transitionDuration: z.number().min(0).max(8),
         moments: z.array(Moment),
+        // Recurrence group from the audio analysis ("A", "B", …): sections that share one are the
+        // same music, and the renderer lays out their world identically.
+        recurrence: z.string().optional(),
       }),
     )
     .min(1),

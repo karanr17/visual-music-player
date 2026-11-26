@@ -16,3 +16,7 @@ search-history.*
 StreamingHistory*.json
 Streaming_History*.json
 endsong*.json
+
+# Demo lyrics we have the rights to (CC BY, see docs/demo/).
+!docs/demo/*.lrc
+public/__local/

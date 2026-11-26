@@ -1,3 +1,4 @@
+import { DEFAULT_ANALYSIS_URL } from "./analysis/client";
 import type { Style } from "./scene/vocab";
 
 export type Provider = "auto" | "claude-code" | "claude" | "ollama" | "off";
@@ -13,6 +14,10 @@ export interface Settings {
   // In the reference look, also show the artwork to Claude so the scenes themselves follow it.
   referenceForScenes: boolean;
   waitForScenes: boolean;
+  // Off ignores every analysis source, which also gives a with/without comparison of a song.
+  useAnalysis: boolean;
+  // Base URL of music-connector's `mc serve`; empty means don't ask it for audio analysis.
+  analysisUrl: string;
 }
 
 export const LOOK_LABELS: Record<Style, string> = {
@@ -50,6 +55,8 @@ const DEFAULTS: Settings = {
   styleOverride: "auto",
   referenceForScenes: true,
   waitForScenes: true,
+  useAnalysis: true,
+  analysisUrl: DEFAULT_ANALYSIS_URL,
 };
 
 const KEY = "vmp.settings";

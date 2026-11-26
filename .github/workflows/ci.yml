@@ -29,4 +29,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # Includes the check that src/analysis/schema.ts still matches the vendored SongAnalysis schema.
+      - run: npm test
       - run: npx vite build

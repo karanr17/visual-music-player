@@ -1,10 +1,12 @@
 import { parseBlob } from "music-metadata";
+import { addLooseSidecars } from "../analysis/client";
 import { dbGet, dbPut } from "../db";
 
 export interface Track {
   id: string;
   file: File;
   lrcFile?: File;
+  analysisFile?: File;
   title: string;
   artist: string;
   album: string;
@@ -13,9 +15,10 @@ export interface Track {
 
 const AUDIO_EXT = /\.(mp3|m4a|aac|flac|wav|ogg|opus|webm)$/i;
 const LRC_EXT = /\.lrc$/i;
+const ANALYSIS_EXT = /\.analysis\.json$/i;
 
 function baseName(name: string): string {
-  return name.replace(/\.[^.]+$/, "").toLowerCase();
+  return name.replace(ANALYSIS_EXT, "").replace(/\.[^.]+$/, "").toLowerCase();
 }
 
 function probeDuration(file: File): Promise<number> {
@@ -139,6 +142,20 @@ export async function tracksFromFiles(files: File[]): Promise<Track[]> {
   }
   // One song and one lyric file dropped together belong together, whatever they're named.
   if (tracks.length === 1 && lrcs.length === 1 && !tracks[0].lrcFile) tracks[0].lrcFile = lrcs[0].file;
+  const sidecars = files.filter((f) => ANALYSIS_EXT.test(f.name));
+  const loose = new Set(sidecars);
+  for (const t of tracks) {
+    const s = sidecars.find((f) => baseName(f.name) === baseName(t.file.name));
+    if (s) {
+      t.analysisFile = s;
+      loose.delete(s);
+    }
+  }
+  if (tracks.length === 1 && sidecars.length === 1 && !tracks[0].analysisFile) {
+    tracks[0].analysisFile = sidecars[0];
+    loose.delete(sidecars[0]);
+  }
+  addLooseSidecars([...loose]);
   return tracks;
 }
 
@@ -161,7 +178,7 @@ async function collectFiles(dir: DirHandle, out: File[], depth = 0): Promise<voi
   if (depth > 6) return;
   for await (const entry of dir.values()) {
     if (entry.kind === "file") {
-      if (AUDIO_EXT.test(entry.name) || LRC_EXT.test(entry.name)) {
+      if (AUDIO_EXT.test(entry.name) || LRC_EXT.test(entry.name) || ANALYSIS_EXT.test(entry.name)) {
         out.push(await (entry as FileSystemFileHandle).getFile());
       }
     } else {

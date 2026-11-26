@@ -1,0 +1,434 @@
+{
+  "$defs": {
+    "Analyzer": {
+      "properties": {
+        "name": {
+          "const": "music-connector",
+          "default": "music-connector",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "model": {
+          "description": "Audio-text embedding model used for windows and descriptors.",
+          "title": "Model",
+          "type": "string"
+        },
+        "calibration": {
+          "description": "Corpus the descriptor z-scores are relative to, e.g. 'cc-reference-90' or 'library'.",
+          "title": "Calibration",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "model",
+        "calibration"
+      ],
+      "title": "Analyzer",
+      "type": "object"
+    },
+    "Descriptor": {
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "cos": {
+          "description": "Raw cosine between the audio and the text prompt.",
+          "title": "Cos",
+          "type": "number"
+        },
+        "z": {
+          "description": "Cosine standardised against the calibration corpus (prompt bias partly removed, divided by the axis's spread). Above ~1.5 is a strong hint; still a hint, not a fact.",
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "label",
+        "cos",
+        "z"
+      ],
+      "title": "Descriptor",
+      "type": "object"
+    },
+    "Energy": {
+      "description": "Envelopes sampled at `frameRate` Hz from t = 0. Each series is scaled to 0..1 within this\nsong (48 dB range below its own 99th percentile), so they show change over time, not absolute\nlevel; `loudnessDb` gives the absolute level.",
+      "properties": {
+        "frameRate": {
+          "title": "Framerate",
+          "type": "number"
+        },
+        "loudnessDb": {
+          "description": "95th percentile RMS level in dBFS.",
+          "title": "Loudnessdb",
+          "type": "number"
+        },
+        "rms": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Rms",
+          "type": "array"
+        },
+        "low": {
+          "description": "20-250 Hz: kick, bass.",
+          "items": {
+            "type": "number"
+          },
+          "title": "Low",
+          "type": "array"
+        },
+        "mid": {
+          "description": "250-4000 Hz: vocals, most instruments.",
+          "items": {
+            "type": "number"
+          },
+          "title": "Mid",
+          "type": "array"
+        },
+        "high": {
+          "description": "4-12 kHz: hats, cymbals, air.",
+          "items": {
+            "type": "number"
+          },
+          "title": "High",
+          "type": "array"
+        }
+      },
+      "required": [
+        "frameRate",
+        "loudnessDb",
+        "rms",
+        "low",
+        "mid",
+        "high"
+      ],
+      "title": "Energy",
+      "type": "object"
+    },
+    "NearestSong": {
+      "properties": {
+        "songId": {
+          "title": "Songid",
+          "type": "integer"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "artist": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Artist"
+        },
+        "cosine": {
+          "title": "Cosine",
+          "type": "number"
+        }
+      },
+      "required": [
+        "songId",
+        "title",
+        "artist",
+        "cosine"
+      ],
+      "title": "NearestSong",
+      "type": "object"
+    },
+    "Segment": {
+      "properties": {
+        "start": {
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "title": "End",
+          "type": "number"
+        },
+        "label": {
+          "description": "Recurrence label: same letter = same material; \u2032 = a variation.",
+          "title": "Label",
+          "type": "string"
+        },
+        "group": {
+          "description": "The letter alone, e.g. 'A' for both 'A' and 'A\u2032'.",
+          "title": "Group",
+          "type": "string"
+        },
+        "variant": {
+          "default": 0,
+          "description": "0 for the first form of a group, 1 for a variation (\u2032).",
+          "title": "Variant",
+          "type": "integer"
+        },
+        "similarity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Cosine to the group's first occurrence; absent on that first occurrence.",
+          "title": "Similarity"
+        },
+        "boundaryStrength": {
+          "description": "Novelty at this segment's start (0 for the first segment).",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Boundarystrength",
+          "type": "number"
+        },
+        "energy": {
+          "description": "Mean of `energy.rms` over the segment.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Energy",
+          "type": "number"
+        },
+        "descriptors": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/Descriptor"
+            },
+            "type": "array"
+          },
+          "title": "Descriptors",
+          "type": "object"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "label",
+        "group",
+        "boundaryStrength",
+        "energy"
+      ],
+      "title": "Segment",
+      "type": "object"
+    },
+    "Source": {
+      "properties": {
+        "sha256": {
+          "description": "SHA-256 of the audio file bytes; the cache key.",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "fileName": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Base name only, never a full path.",
+          "title": "Filename"
+        },
+        "durationS": {
+          "title": "Durations",
+          "type": "number"
+        },
+        "sampleRate": {
+          "description": "Rate the audio was analysed at (Hz).",
+          "title": "Samplerate",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sha256",
+        "durationS",
+        "sampleRate"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "Tempo": {
+      "properties": {
+        "bpm": {
+          "title": "Bpm",
+          "type": "number"
+        },
+        "confidence": {
+          "description": "Onset autocorrelation at the beat period (1 = metronomic). Below ~0.45 the tempo may be off by 2x or wrong; a weak warning, not a guarantee.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "beatsPerBar": {
+          "default": 4,
+          "description": "Assumed meter; v1 only detects 4/4 downbeat phase.",
+          "title": "Beatsperbar",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "bpm",
+        "confidence"
+      ],
+      "title": "Tempo",
+      "type": "object"
+    },
+    "Windows": {
+      "description": "Per-window detail, only present when requested (it is the bulk of the file).",
+      "properties": {
+        "windowS": {
+          "title": "Windows",
+          "type": "number"
+        },
+        "hopS": {
+          "title": "Hops",
+          "type": "number"
+        },
+        "starts": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Starts",
+          "type": "array"
+        },
+        "descriptors": {
+          "items": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/$defs/Descriptor"
+              },
+              "type": "array"
+            },
+            "type": "object"
+          },
+          "title": "Descriptors",
+          "type": "array"
+        }
+      },
+      "required": [
+        "windowS",
+        "hopS",
+        "starts",
+        "descriptors"
+      ],
+      "title": "Windows",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "schemaVersion": {
+      "default": "1.0",
+      "pattern": "^1\\.\\d+$",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "analyzer": {
+      "$ref": "#/$defs/Analyzer"
+    },
+    "source": {
+      "$ref": "#/$defs/Source"
+    },
+    "tempo": {
+      "$ref": "#/$defs/Tempo"
+    },
+    "beats": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Beats",
+      "type": "array"
+    },
+    "downbeats": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Downbeats",
+      "type": "array"
+    },
+    "onsets": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Onsets",
+      "type": "array"
+    },
+    "energy": {
+      "$ref": "#/$defs/Energy"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/Segment"
+      },
+      "title": "Segments",
+      "type": "array"
+    },
+    "descriptors": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/Descriptor"
+        },
+        "type": "array"
+      },
+      "description": "Whole-song descriptors.",
+      "title": "Descriptors",
+      "type": "object"
+    },
+    "windows": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Windows"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "nearest": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/NearestSong"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Closest songs in the local library; only when requested.",
+      "title": "Nearest"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "analyzer",
+    "source",
+    "tempo",
+    "beats",
+    "downbeats",
+    "onsets",
+    "energy",
+    "segments",
+    "descriptors"
+  ],
+  "title": "SongAnalysis",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/karanr17/music-connector/schema/song-analysis.v1.schema.json",
+  "description": "SongAnalysis v1: the JSON contract between music-connector and its consumers (the visual\nmusic player first). `schema/song-analysis.v1.schema.json` is generated from these models.\n\nVersioning: `schemaVersion` is \"1.<minor>\". Minor bumps only add optional fields, so a v1\nreader must ignore fields it does not know. Removing or changing the meaning of a field is a\nnew major version with a new schema file."
+}
