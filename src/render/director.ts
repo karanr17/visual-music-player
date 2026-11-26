@@ -88,7 +88,7 @@ export class Director {
     this.script = script;
     this.style = style;
     this.params = script.sections.map((s) => worldParams(s.world));
-    this.seeds = script.sections.map((s, i) => seedOf(`${script.trackKey}|${s.world.setting}|${i % 3}`));
+    this.seeds = script.sections.map((s, i) => seedOf(`${script.trackKey}|${s.world.setting}|${s.recurrence ?? i % 3}`));
     this.sprites = new Map((script.sprites ?? []).map((sp) => [sp.name, compileSprite(sp.palette, sp.rows)]));
     this.speeds = script.sections.map((s) => s.moments.map((m) => travelSpeed(s.world.setting, m.subjects)));
     // Carried across sections so a road that continues into the next section keeps rolling.

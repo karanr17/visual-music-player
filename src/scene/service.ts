@@ -1,3 +1,5 @@
+import { loadAnalysis, type LoadedAnalysis } from "../analysis/client";
+import { buildTimeline, segmentLines } from "../analysis/structure";
 import { computeEnvelope, type Envelope } from "../audio/envelope";
 import type { Track } from "../library/library";
 import { loadLyrics, lyricsHash, type Lyrics } from "../lyrics/lyrics";
@@ -27,7 +29,7 @@ function logEvent(msg: string): void {
   }
 }
 
-export type SceneStatus = "loading" | "ambient" | "queued" | "generating" | "ready" | "error";
+export type SceneStatus = "loading" | "analysing" | "ambient" | "queued" | "generating" | "ready" | "error";
 
 export interface Prepared {
   track: Track;
@@ -37,6 +39,7 @@ export interface Prepared {
   scriptKey: string;
   lyrics: Lyrics;
   envelope: Envelope | null;
+  analysis: LoadedAnalysis | null;
   prefs: SongPrefs;
   script: SceneScript;
   status: SceneStatus;
@@ -49,6 +52,12 @@ function generatorId(): string {
   const base = s.provider === "ollama" ? `ollama:${s.ollamaModel}` : s.model;
   const ref = seesReference() ? currentReference() : null;
   return ref ? `${base}+ref:${ref.id}` : base;
+}
+
+// Scripts written with and without audio analysis are cached apart, so analysis arriving later
+// (mc serve started, a sidecar dropped) gets a fresh script instead of the old one.
+function scriptKeyFor(baseKey: string, model: string, analysis: LoadedAnalysis | null): string {
+  return `${baseKey}#${model}${analysis ? `#audio:${analysis.sha256.slice(0, 12)}` : ""}`;
 }
 
 // Scenes are written with the reference artwork in view only in the reference look, by choice.
@@ -90,10 +99,18 @@ export class SceneService extends EventTarget {
 
   private async load(track: Track): Promise<Prepared> {
     const key = trackKey(track);
-    const [lyrics, envelope, prefs] = await Promise.all([loadLyrics(track), computeEnvelope(track.file), getPrefs(key)]);
+    const analysisP = !getSettings().useAnalysis ? Promise.resolve(null) : loadAnalysis(track, {
+      serverUrl: getSettings().analysisUrl.trim(),
+      onServerStart: () => {
+        this.statuses.set(track.id, "analysing");
+        this.dispatchEvent(new CustomEvent<string>("analysing", { detail: track.id }));
+      },
+    });
+    const [lyrics, envelope, prefs, analysis] = await Promise.all([loadLyrics(track), computeEnvelope(track.file), getPrefs(key), analysisP]);
+    if (analysis) logEvent(`${track.title || track.file.name}: analysis from ${analysis.origin}`);
     const baseKey = `${key}#${lyricsHash(lyrics)}`;
     const model = generatorId();
-    const scriptKey = `${baseKey}#${model}`;
+    const scriptKey = scriptKeyFor(baseKey, model, analysis);
     const cached = await getScript(scriptKey);
     return {
       track,
@@ -103,6 +120,7 @@ export class SceneService extends EventTarget {
       scriptKey,
       lyrics,
       envelope,
+      analysis,
       prefs,
       script: cached ?? ambientScript(track, envelope, key),
       status: cached ? "ready" : "ambient",
@@ -146,11 +164,14 @@ export class SceneService extends EventTarget {
     try {
       const settings = getSettings();
       const hasLyrics = p.lyrics.lines.length > 0;
-      const pseudo = hasLyrics ? null : pseudoLines(p.envelope, p.track.duration);
-      const lineTimes = hasLyrics ? p.lyrics.lines.map((l) => l.t) : pseudo!.map((l) => l.t);
+      const analysis = p.analysis?.analysis ?? null;
+      const timeline = hasLyrics && analysis ? buildTimeline(p.lyrics.lines, analysis) : null;
+      const pseudo = hasLyrics ? null : analysis ? segmentLines(analysis) : pseudoLines(p.envelope, p.track.duration);
+      const lineTimes = timeline ? timeline.map((l) => l.t) : hasLyrics ? p.lyrics.lines.map((l) => l.t) : pseudo!.map((l) => l.t);
       const library = await spriteLibrary();
       const image = model.includes("+ref:") ? referenceImagePart() : null;
-      const prompt = buildUserPrompt(p.track, p.lyrics, pseudo, p.prefs.scenePrompt, [...library.keys()], !!image);
+      const audio = analysis ? { analysis, timeline } : null;
+      const prompt = buildUserPrompt(p.track, p.lyrics, pseudo, p.prefs.scenePrompt, [...library.keys()], !!image, audio);
       const { output, provider } = await interpret(settings, prompt, abort.signal, [...library.keys()], image);
       // Scripts embed every sprite they use, so an exported script renders on its own.
       const used = new Set(output.sections.flatMap((s) => s.moments.flatMap((m) => m.subjects.map((x) => x.custom).filter(Boolean))));
@@ -158,7 +179,7 @@ export class SceneService extends EventTarget {
       const sprites = [...output.sprites.filter((s) => used.has(s.name)), ...[...used].filter((n) => !drawn.has(n)).flatMap((n) => library.get(n) ?? [])];
       await saveSprites(output.sprites);
       const script = {
-        ...compile(output, lineTimes, p.track.duration, p.key, provider),
+        ...compile(output, lineTimes, p.track.duration, p.key, provider, analysis ? { analysis, instrumental: lineTimes.map((_, i) => timeline?.[i]?.lyric === null) } : null),
         model: provider === "ollama" ? settings.ollamaModel : settings.model,
         sprites,
       };
@@ -191,7 +212,7 @@ export class SceneService extends EventTarget {
   async switchModel(track: Track): Promise<void> {
     const p = await this.prepare(track);
     p.model = generatorId();
-    p.scriptKey = `${p.baseKey}#${p.model}`;
+    p.scriptKey = scriptKeyFor(p.baseKey, p.model, p.analysis);
     if (this.running?.id === track.id) this.running.abort.abort();
     const cached = await getScript(p.scriptKey);
     if (cached) {

@@ -21,6 +21,7 @@ const SLOW_MS = 1000 / 30;
 
 const STATUS_TEXT: Record<SceneStatus, string> = {
   loading: "Loading…",
+  analysing: "Analysing audio with mc serve…",
   ambient: "Ambient scene",
   queued: "Queued for scenes",
   generating: "Imagining scenes…",
@@ -256,9 +257,9 @@ export class App {
       <div class="status" hidden></div>
       <div class="empty">
         <h1>Visual Music Player</h1>
-        <p>Drop audio files (and matching <code>.lrc</code> files) anywhere, or open a folder.</p>
+        <p>Drop audio files (and matching <code>.lrc</code> or <code>.analysis.json</code> files) anywhere, or open a folder.</p>
         <div class="row">
-          <label class="btn">Add files<input type="file" multiple accept="audio/*,.lrc" data-files hidden></label>
+          <label class="btn">Add files<input type="file" multiple accept="audio/*,.lrc,.json" data-files hidden></label>
           <button class="btn" data-folder ${folderSupported ? "" : "hidden"}>Open folder</button>
           <button class="btn" data-reopen hidden></button>
         </div>
@@ -268,7 +269,7 @@ export class App {
         <header>
           <strong>Queue</strong>
           <span class="row">
-            <label class="btn sm">Add<input type="file" multiple accept="audio/*,.lrc" data-files hidden></label>
+            <label class="btn sm">Add<input type="file" multiple accept="audio/*,.lrc,.json" data-files hidden></label>
             <button class="btn sm" data-folder ${folderSupported ? "" : "hidden"}>Folder</button>
           </span>
         </header>
@@ -332,6 +333,9 @@ export class App {
 
   private bindEvents(): void {
     this.scenes.addEventListener("update", this.onSceneUpdate);
+    this.scenes.addEventListener("analysing", (e) => {
+      if (!this.current && this.tracks[this.index]?.id === (e as CustomEvent<string>).detail) this.setStatus("analysing");
+    });
     this.audio.addEventListener("ended", () => void this.play(this.index + 1));
     this.audio.addEventListener("play", () => (this.ui.play.textContent = "⏸"));
     this.audio.addEventListener("pause", () => (this.ui.play.textContent = "▶"));
@@ -515,7 +519,9 @@ export class App {
     const p = this.current;
     const lyr = p ? (p.lyrics.lines.length ? `${p.lyrics.synced ? "synced" : "unsynced"} lyrics · ${p.lyrics.source}` : p.lyrics.instrumental ? "instrumental" : "no lyrics found") : "";
     const by = p?.status === "ready" && p.script.model ? `scenes: ${modelLabel(p.script.model)}${p.model.includes("+ref:") ? " + reference" : ""}` : "";
-    this.ui.sub.textContent = [t?.artist, lyr, by].filter(Boolean).join(" · ");
+    const a = p?.analysis;
+    const audio = a ? `${Math.round(a.analysis.tempo.bpm)} BPM · ${a.analysis.segments.length} parts (${a.origin})` : p ? "no audio analysis" : "";
+    this.ui.sub.textContent = [t?.artist, lyr, audio, by].filter(Boolean).join(" · ");
     (this.ui.model as HTMLSelectElement).value = getSettings().model;
     const o = p?.prefs.lyricOffset ?? 0;
     this.ui.offset.textContent = `${o >= 0 ? "+" : ""}${o.toFixed(1)}s`;
@@ -579,6 +585,12 @@ export class App {
           <small>Ollama needs <code>OLLAMA_ORIGINS=*</code> (or this page's origin) to accept browser requests.</small>
         </fieldset>
         <fieldset>
+          <legend>Audio analysis</legend>
+          <label class="check"><input type="checkbox" name="useAnalysis" ${s.useAnalysis ? "checked" : ""}> Use audio analysis (tempo, bars, repeating parts) when it's available</label>
+          <label>music-connector URL <input name="analysisUrl" value="${esc(s.analysisUrl)}" placeholder="empty: don't ask a server"></label>
+          <small>When <code>mc serve</code> runs there, each new song is analysed for tempo, bars and repeating parts, so scenes change on the beat and choruses return to their world. Without it, <code>.analysis.json</code> sidecar files are used. Applies from the next song loaded.</small>
+        </fieldset>
+        <fieldset>
           <legend>Display</legend>
           <label class="check"><input type="checkbox" name="captions" ${s.captions ? "checked" : ""}> Show lyrics as captions</label>
           <label class="check"><input type="checkbox" name="waitForScenes" ${s.waitForScenes ? "checked" : ""}> Wait for scenes before playing a new song</label>
@@ -634,6 +646,8 @@ export class App {
         captions: f.get("captions") === "on",
         waitForScenes: f.get("waitForScenes") === "on",
         referenceForScenes: f.get("referenceForScenes") === "on",
+        analysisUrl: String(f.get("analysisUrl") ?? "").trim(),
+        useAnalysis: f.get("useAnalysis") === "on",
       });
     };
     form.addEventListener("change", (e) => {

@@ -1,3 +1,5 @@
+import type { SongAnalysis } from "../analysis/schema";
+import type { TimelineEntry } from "../analysis/structure";
 import type { Track } from "../library/library";
 import type { Lyrics } from "../lyrics/lyrics";
 
@@ -33,6 +35,54 @@ export interface PseudoLine {
   text: string;
 }
 
+// Per-axis descriptors worth showing: the model's top picks, dropped when the calibrated score
+// says the audio barely leans that way.
+const MIN_DESCRIPTOR_Z = 0.5;
+
+function lineSpan(timeline: { t: number }[], start: number, end: number): string {
+  const idx = timeline.flatMap((l, i) => (l.t >= start - 0.5 && l.t < end - 0.5 ? [i] : []));
+  if (!idx.length) return "";
+  return idx.length === 1 ? `line ${idx[0]}` : `lines ${idx[0]}-${idx[idx.length - 1]}`;
+}
+
+export function audioBlock(analysis: SongAnalysis, timeline: { t: number }[]): string {
+  const { tempo } = analysis;
+  const shaky = tempo.confidence < 0.45 ? `; low confidence ${tempo.confidence.toFixed(2)}, may be half or double` : "";
+  const segs = analysis.segments.map((s) => {
+    const span = lineSpan(timeline, s.start, s.end);
+    return `  ${fmt(s.start)}-${fmt(s.end)}  ${s.label.padEnd(2)}  energy ${s.energy.toFixed(2)}${span ? `  (${span})` : ""}`;
+  });
+  const hints = Object.entries(analysis.descriptors)
+    .map(([axis, ds]) => {
+      const top = ds.filter((d) => d.z >= MIN_DESCRIPTOR_Z).slice(0, 3);
+      return top.length ? `  ${axis}: ${top.map((d) => `${d.label} (z ${d.z.toFixed(1)})`).join(", ")}` : "";
+    })
+    .filter(Boolean);
+  return [
+    "Audio (measured from the recording itself):",
+    `- Tempo: about ${Math.round(tempo.bpm)} BPM, ${tempo.beatsPerBar ?? 4} beats per bar${shaky}.`,
+    "- Structure: parts of the song in time order. The same letter means the same music returning; ′ marks a variation of it. Energy is 0-1 within this song.",
+    ...segs,
+    ...(hints.length
+      ? [
+          "- Sound impressions. These are hints from an audio-text model and are often wrong (vocals, era and genre especially), so the lyrics win whenever they disagree; use them only for choices the words leave open, like the look, the weather and the energy of a scene. z above 1.5 is a strong lean:",
+          ...hints,
+        ]
+      : []),
+    "How to use the audio:",
+    "- A line marked (instrumental) is a stretch with no singing. Start a new section at every such line and give it a world of its own that sets up or answers the sung parts around it: label it intro before the first sung line, outro after the last, instrumental in between. Fill it with atmosphere and slow change rather than people mid-story.",
+    "- Sections over the same letter are the same music coming back: give them the same section label and the same world, so a returning chorus returns to its place. Vary the moments, not the world.",
+    "- Begin and end your sections where the structure changes when the lyrics allow it. Section changes are moved onto the nearest bar line automatically.",
+    "- Let energy shape the scenes: quiet parts are calm, sparse and wide; the loudest parts carry the strongest events and the most motion.",
+  ].join("\n");
+}
+
+export interface AudioPromptInput {
+  analysis: SongAnalysis;
+  // Lyric lines with instrumental markers interleaved; the line indices the model answers with.
+  timeline: TimelineEntry[] | null;
+}
+
 export function buildUserPrompt(
   track: Track,
   lyrics: Lyrics,
@@ -40,6 +90,7 @@ export function buildUserPrompt(
   userDirection: string,
   librarySprites: string[] = [],
   withReference = false,
+  audio: AudioPromptInput | null = null,
 ): string {
   const head = [
     `Title: ${track.title || "(unknown)"}`,
@@ -56,10 +107,12 @@ export function buildUserPrompt(
       `Imagine scenes from the title, the artist's world and the energy shape. Treat each segment index as a line index.\n\n` +
       pseudo.map((p, i) => `[${i}] ${p.text}`).join("\n");
   } else {
+    const lines = audio?.timeline ?? lyrics.lines;
     body =
       `Lyrics (line index, start time, text)${lyrics.synced ? "" : " — timing is approximate"}:\n\n` +
-      lyrics.lines.map((l, i) => `[${i}] ${fmt(l.t)} ${l.text}`).join("\n");
+      lines.map((l, i) => `[${i}] ${fmt(l.t)} ${l.text}`).join("\n");
   }
+  if (audio) body += `\n\n${audioBlock(audio.analysis, pseudo ?? audio.timeline ?? lyrics.lines)}`;
 
   const direction = userDirection.trim()
     ? `\n\nThe listener has given this direction for the scenes; follow it where it applies:\n${userDirection.trim()}`
