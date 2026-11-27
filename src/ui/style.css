@@ -64,6 +64,10 @@ code { font-family: ui-monospace, monospace; font-size: 0.9em; }
 .empty p { color: var(--dim); }
 .empty .row { justify-content: center; }
 .empty .hint a { color: var(--accent); }
+.empty .try { margin-top: 28px; }
+.empty .try .hint { max-width: 640px; margin: 10px auto 0; font-size: 12px; }
+.empty a.btn { text-decoration: none; }
+.now .credit a { color: inherit; }
 
 .status {
   position: absolute;

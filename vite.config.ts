@@ -63,5 +63,7 @@ function claudeCodeBridge(): Plugin {
 }
 
 export default defineConfig({
+  // GitHub Pages serves the site from /<repo>/; the Pages workflow sets VMP_BASE.
+  base: process.env.VMP_BASE ?? "/",
   plugins: [claudeCodeBridge()],
 });

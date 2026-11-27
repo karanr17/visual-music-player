@@ -5,6 +5,7 @@ import { folderSupported, pickFolder, rememberedFolderName, reopenFolder, tracks
 import { Captions } from "./render/captions";
 import { loadCharacters } from "./render/characters";
 import { demoContent } from "./demo";
+import { CC_BY, demoSongs, demoTrack } from "./demo-songs";
 import { Director } from "./render/director";
 import { loadPlates } from "./plates/client";
 import { PH, PW } from "./render/fb";
@@ -71,6 +72,7 @@ export class App {
     this.bindEvents();
     this.director.setEnergyIntegral(this.energySum);
     this.startDemoFromUrl();
+    void this.showDemoCredits();
     // Figures are drawn from the character atlas, so the first frame waits for it.
     loadCharacters()
       .catch((err) => console.error("[player] character sprites failed to load", err))
@@ -177,6 +179,36 @@ export class App {
   private startAudio(): void {
     this.pendingPlay = null;
     void this.audio.play().catch(() => this.toast("Press ▶ to start playback"));
+  }
+
+  // Loads the first song and starts it, then queues the others as they arrive. Illustrated mode
+  // goes on, since the plates are the point of the demo; ▦ turns it off.
+  private async playDemoSongs(btn: HTMLButtonElement): Promise<void> {
+    btn.disabled = true;
+    btn.textContent = "Loading…";
+    try {
+      updateSettings({ illustrated: true });
+      const songs = await demoSongs();
+      await this.addTracks([await demoTrack(songs[0])]);
+      for (const s of songs.slice(1)) await this.addTracks([await demoTrack(s)]);
+    } catch (err) {
+      console.warn("[demo] songs unavailable", err);
+      this.toast("The demo songs' audio isn't in this build. Run scripts/fetch-demo-audio.sh, or use the hosted demo.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Play 3 CC BY songs (illustrated)";
+    }
+  }
+
+  private async showDemoCredits(): Promise<void> {
+    try {
+      const songs = await demoSongs();
+      this.ui.demoCredits.innerHTML = `Songs, all <a href="${CC_BY}" target="_blank" rel="noopener">CC BY 3.0</a> from ccMixter: ${songs
+        .map((s) => `<a href="${esc(s.page)}" target="_blank" rel="noopener">${esc(s.title)}</a> by ${esc(s.credit)}`)
+        .join("; ")}.`;
+    } catch {
+      this.ui.demoCredits.parentElement!.hidden = true;
+    }
   }
 
   // A plate set may arrive on its own, for the song already playing.
@@ -309,6 +341,15 @@ export class App {
           <button class="btn" data-reopen hidden></button>
         </div>
         <p class="hint">Scenes come from your Claude subscription via Claude Code (under <code>npm run dev</code>), or an API key / Ollama in <a href="#" data-open-settings>settings</a>.</p>
+        <div class="try">
+          <p>Or try it with no setup:</p>
+          <div class="row">
+            <button class="btn primary" data-demo-songs>Play 3 CC BY songs (illustrated)</button>
+            <a class="btn" href="?demo">Watch the demo reel</a>
+            <a class="btn" href="${import.meta.env.BASE_URL}about/index.html">How it works</a>
+          </div>
+          <p class="hint" data-demo-credits></p>
+        </div>
       </div>
       <aside class="playlist" hidden>
         <header>
@@ -327,7 +368,7 @@ export class App {
           <button class="icon" data-prev title="Previous (Shift+←)">⏮</button>
           <button class="icon big" data-play title="Play/Pause (Space)">▶</button>
           <button class="icon" data-next title="Next (Shift+→)">⏭</button>
-          <div class="now"><div data-title>—</div><div class="sub" data-sub></div></div>
+          <div class="now"><div data-title>—</div><div class="sub" data-sub></div><div class="sub credit" data-credit hidden></div></div>
           <div class="offset" title="Lyric offset ([ / ])"><button class="icon sm" data-off="-0.1">−</button><span data-offset>+0.0s</span><button class="icon sm" data-off="0.1">+</button></div>
           <select class="model" data-model title="Model that imagines the scenes">${CLAUDE_MODELS.map((m) => `<option value="${m.id}">${m.short}</option>`).join("")}</select>
           <select class="model" data-look title="Look: art style the scenes are drawn in"></select>
@@ -360,6 +401,8 @@ export class App {
       dur: q("[data-dur]"),
       title: q("[data-title]"),
       sub: q("[data-sub]"),
+      credit: q("[data-credit]"),
+      demoCredits: q("[data-demo-credits]"),
       offset: q("[data-offset]"),
       cc: q("[data-cc]"),
       plates: q("[data-plates]"),
@@ -415,6 +458,7 @@ export class App {
       else if (t.matches("[data-next]")) void this.play(this.index + 1);
       else if (t.matches("[data-cc]")) updateSettings({ captions: !getSettings().captions });
       else if (t.matches("[data-plates]")) updateSettings({ illustrated: !getSettings().illustrated });
+      else if (t.matches("[data-demo-songs]")) void this.playDemoSongs(t as HTMLButtonElement);
       else if (t.matches("[data-fs]")) this.toggleFullscreen();
       else if (t.matches("[data-settings], [data-open-settings]")) {
         e.preventDefault();
@@ -573,7 +617,7 @@ export class App {
 
   private renderNowPlaying(): void {
     const t = this.tracks[this.index];
-    this.ui.empty.hidden = !!this.tracks.length;
+    this.ui.empty.hidden = !!this.tracks.length || !!this.demo;
     this.ui.title.textContent = t ? t.title || t.file.name : "—";
     const p = this.current;
     const lyr = p ? (p.lyrics.lines.length ? `${p.lyrics.synced ? "synced" : "unsynced"} lyrics · ${p.lyrics.source}` : p.lyrics.instrumental ? "instrumental" : "no lyrics found") : "";
@@ -583,6 +627,10 @@ export class App {
     const shown = this.director.platesShown;
     const plates = getSettings().illustrated && p ? (shown ? `illustrated: ${shown}/${p.script.sections.length} sections` : "no plates") : "";
     this.ui.sub.textContent = [t?.artist, lyr, audio, by, plates].filter(Boolean).join(" · ");
+    this.ui.credit.hidden = !t?.credit;
+    if (t?.credit) {
+      this.ui.credit.innerHTML = `<a href="${esc(t.credit.url)}" target="_blank" rel="noopener">${esc(t.credit.text)}</a> · <a href="${CC_BY}" target="_blank" rel="noopener">CC BY 3.0</a>`;
+    }
     (this.ui.model as HTMLSelectElement).value = getSettings().model;
     const o = p?.prefs.lyricOffset ?? 0;
     this.ui.offset.textContent = `${o >= 0 ? "+" : ""}${o.toFixed(1)}s`;

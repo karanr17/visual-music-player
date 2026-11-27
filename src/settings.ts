@@ -71,7 +71,8 @@ const DEFAULTS: Settings = {
   ollamaDirectorModel: "",
   useAnalysis: true,
   reactivity: "subtle",
-  analysisUrl: DEFAULT_ANALYSIS_URL,
+  // mc serve only answers the local dev origins, so a hosted copy doesn't ask it by default.
+  analysisUrl: ["localhost", "127.0.0.1"].includes(location.hostname) ? DEFAULT_ANALYSIS_URL : "",
   illustrated: false,
 };
 

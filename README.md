@@ -1,10 +1,22 @@
 # Visual Music Player
 
+**[Live demo](https://karanr17.github.io/visual-music-player/)** (three CC BY songs in illustrated
+mode, and the `?demo` reel; no install, no API key) · **[How it works](https://karanr17.github.io/visual-music-player/about/)**
+(architecture, the SongAnalysis contract and the evals on one page) · audio analysis and
+recommender: [music-connector](https://github.com/karanr17/music-connector)
+
+[![Three CC BY songs in illustrated mode](public/hero.gif)](public/hero.mp4)
+
+*[public/hero.mp4](public/hero.mp4): 79 s with sound, three CC BY 3.0 songs from ccMixter (credits
+at the end and under [The hosted demo](#the-hosted-demo)).*
+
 A web music player that pictures what a song *means*. An LLM reads the lyrics once and writes a
 scene script; a procedural pixel-art engine draws that script in sync with playback, and the music
 drives how alive the scene is. The design and roadmap live in [SPEC.md](SPEC.md).
 
 Static site: Vite + TypeScript, no UI framework, no backend.
+
+## Before and after
 
 ![Before and after: the ?demo reel on main (left) and with sprite-sheet people, shot framing and a caption-safe area (right)](docs/before-after.gif)
 
@@ -63,10 +75,43 @@ Other scripts:
 | `node scripts/eval/run.mjs …` | the scene-script eval (see [docs/eval](docs/eval/README.md)) |
 | `npm run build` | typecheck, then a static build into `dist/` |
 | `npm run preview` | serve the built `dist/` |
+| `scripts/fetch-demo-audio.sh` | download the three CC BY demo songs into `public/audio/` (gitignored), checked by SHA-256 |
 | `scripts/check-secrets.sh` | the no-secrets check CI runs (add `--history` to scan every commit) |
 | `node scripts/render-comparison.mjs …` | render two scene scripts for one song side by side into an mp4 (see the script's header) |
 | `cd scripts/plates && uv run plates generate song.scene.json` | generate illustrated-mode plates for a scene script (see [Illustrated mode](#illustrated-mode)) |
 | `node scripts/build-characters.mjs <lpc>` | rebuild the character atlas from a checkout of the LPC generator (see [CREDITS.md](CREDITS.md)) |
+
+## The hosted demo
+
+<https://karanr17.github.io/visual-music-player/> is this app built by
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) on every push to `main`. **Play 3 CC BY
+songs** loads three songs from ccMixter with everything precomputed, so nothing runs but the
+browser:
+
+| Song (all [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)) | Credits |
+|---|---|
+| [Unbury Your Heart](https://ccmixter.org/files/SiobhanD/57378) | remix by Siobhan Dakay; lyrics, music and vocals by Madam Snowflake |
+| [Waking Me Softly](https://ccmixter.org/files/Ghost_k/39570) | Ghost_k (Ghost Kollective); lyrics and vocals by Madam Snowflake |
+| [Where the Moon Shines Bright](https://ccmixter.org/files/mindmapthat/62227) | remix by Kara Square of Mr_Yesterday (D A Ayer, words and vocals) and Stefan Kartenberg (JeffSpeed68) |
+
+- **Audio** is never committed. The workflow runs `scripts/fetch-demo-audio.sh`, which downloads
+  each MP3 from ccMixter, or from the
+  [`demo-audio-v1` release](https://github.com/karanr17/visual-music-player/releases/tag/demo-audio-v1)
+  when ccMixter refuses the runner, and checks it against the SHA-256 in its analysis. The
+  player bar credits the playing song with links to its page and the licence.
+- **Analyses** ([`public/analysis/`](public/analysis/)) come from music-connector.
+- **Scene scripts** ([`public/scripts/`](public/scripts/)) were written by Claude Sonnet 5.5 (one
+  pass, with the analysis) and are picked by the audio's SHA-256 when the browser has no script
+  of its own for the song, so the hosted demo needs no LLM. Drop the same MP3 into a local copy
+  and you get the same script.
+- **Plates** ([`public/plates/`](public/plates/)) come from `scripts/plates` (see
+  [Illustrated mode](#illustrated-mode)).
+- **Lyrics** ([`public/demo/`](public/demo/)) are the published lyrics timed to each recording:
+  by hand for *Unbury Your Heart*, from Whisper and corrected by hand (approximate) for the
+  other two.
+
+The [How it works](https://karanr17.github.io/visual-music-player/about/) page
+([`public/about/index.html`](public/about/index.html)) is the one-page write-up.
 
 ## The `?demo` showcase
 
@@ -246,12 +291,13 @@ The line under the title shows where the analysis came from, e.g. `100 BPM · 13
 The player looks for analysis in this order and uses the first it finds:
 
 1. the IndexedDB cache;
-2. `mc serve` at the configured URL (skipped quickly if it isn't running);
-3. a `.analysis.json` sidecar dropped or opened with the audio: `song.mp3` pairs with
+2. the analyses bundled with the static build in [`public/analysis/`](public/analysis/) for the three
+   CC BY demo songs, matched by SHA-256 (they are what `mc serve` returns for those exact files);
+3. `mc serve` at the configured URL (skipped quickly if it isn't running; on a hosted copy the URL
+   starts empty, since `mc serve` only answers the local dev origins);
+4. a `.analysis.json` sidecar dropped or opened with the audio: `song.mp3` pairs with
    `song.analysis.json`, and a sidecar with another name is matched by the SHA-256 or file name it
-   records (one song plus one sidecar dropped together always pair);
-4. the analyses bundled with the static build in [`public/analysis/`](public/analysis/) for the three
-   CC BY demo songs, matched by SHA-256.
+   records (one song plus one sidecar dropped together always pair).
 
 Make a sidecar with `uv run mc analyze song.mp3 -o song.analysis.json`. If none of these has an
 analysis, the player works as before: sections follow the lyrics, transitions start at lyric lines.

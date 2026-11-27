@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How It Works · Visual Music Player</title>
+<meta name="description" content="Two repositories that work together: a Mac-side audio analyser and recommender, and a browser player that pictures what a song means.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23140f24'/%3E%3Crect y='11' width='16' height='5' fill='%23d9822b'/%3E%3Crect x='11' y='3' width='3' height='3' fill='%23ffd678'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #faf8f5; --fg: #1d1a24; --dim: #5d5868; --line: #e3dfd8; --panel: #f1ede6; --accent: #b25e12; --code: #efe9df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #13101d; --fg: #ece6f5; --dim: #a59fb3; --line: #2c2740; --panel: #1b1729; --accent: #ffb15c; --code: #1f1a2e; }
+  }
+  :root[data-theme="dark"] { --bg: #13101d; --fg: #ece6f5; --dim: #a59fb3; --line: #2c2740; --panel: #1b1729; --accent: #ffb15c; --code: #1f1a2e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 880px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 8px; }
+  h2 { margin: 48px 0 12px; font-size: 1.35rem; border-top: 1px solid var(--line); padding-top: 24px; }
+  h3 { margin: 24px 0 8px; font-size: 1.05rem; }
+  p, li { color: var(--fg); }
+  .lede { color: var(--dim); font-size: 1.1rem; margin: 0 0 20px; }
+  a { color: var(--accent); }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 24px; }
+  .links a { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 6px; text-decoration: none; color: var(--fg); }
+  .links a.primary { background: var(--accent); color: var(--bg); border-color: transparent; font-weight: 600; }
+  video { width: 100%; border-radius: 8px; background: #000; display: block; image-rendering: pixelated; }
+  .cap { color: var(--dim); font-size: 0.9rem; margin-top: 6px; }
+  .table { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  pre { background: var(--code); padding: 12px 14px; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.45; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; }
+  .mermaid { background: var(--panel); border-radius: 8px; padding: 12px; overflow-x: auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .card h3 { margin-top: 0; }
+  footer { color: var(--dim); font-size: 0.85rem; margin-top: 48px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Visual Music Player + music-connector</h1>
+  <p class="lede">A music player that pictures what a song <em>means</em>. An LLM reads the lyrics and an audio analysis once and writes a scene script; a deterministic pixel-art engine draws it in time with the beat. A separate Mac-side service hears the music, because the LLM can't.</p>
+  <div class="links">
+    <a class="primary" href="../">Open the live demo</a>
+    <a href="https://github.com/karanr17/visual-music-player">visual-music-player (TypeScript)</a>
+    <a href="https://github.com/karanr17/music-connector">music-connector (Python)</a>
+  </div>
+
+  <video src="../hero.mp4" controls preload="metadata" poster="../hero.gif"></video>
+  <p class="cap">79 s, with sound. Three CC BY 3.0 songs from ccMixter in illustrated mode; credits at the end of the video and <a href="#credits">below</a>.</p>
+
+  <h2>Architecture in one picture</h2>
+  <p>Two repositories, one JSON contract between them. The player is a static web app and works without the Mac: analyses, scripts and plates can be files.</p>
+  <pre class="mermaid">
+flowchart TB
+  subgraph MC["music-connector · Python on the Mac"]
+    A["mc serve / mc analyze<br/>MuQ-MuLan embeddings + librosa"]
+    R["Recommender<br/>taste clusters + Thompson sampling"]
+    X["Browser extension<br/>live listening events"] --> R
+  end
+  subgraph VMP["visual-music-player · static web app"]
+    P["Scene prompt<br/>lyrics + Audio block"] --> L["Claude / Ollama<br/>scene script"]
+    L --> C["compile<br/>downbeat snap, instrumental sections,<br/>returning choruses"]
+    C --> E["Renderer<br/>pure function of time, beat-locked"]
+  end
+  A -- "SongAnalysis v1 JSON<br/>(HTTP or .analysis.json file)" --> P
+  A -- "beats, downbeats, bands" --> E
+  F["scripts/plates · FLUX.1-schnell + depth<br/>local, once per song"] -- ".plates.json" --> E
+  </pre>
+  <div class="grid">
+    <div class="card"><h3>Hearing</h3>music-connector decodes the song, embeds 10 s windows with MuQ-MuLan and runs librosa for tempo, beats, downbeats, band energy and novelty. Window similarity says which sections are the same music (<code>A B B C … C</code>).</div>
+    <div class="card"><h3>Reading</h3>The scene model gets the lyrics plus an Audio block: parts in time order with recurrence letters and energy, and descriptors marked as hints. It answers in a closed vocabulary, so every scene is drawable.</div>
+    <div class="card"><h3>Drawing</h3>compile snaps section changes to downbeats and makes returning choruses return to their world. The renderer is a pure function of time: steps land on beats, light lifts on downbeats, seeking lands on the same frame.</div>
+  </div>
+
+  <h2>The contract: SongAnalysis v1</h2>
+  <p>A versioned JSON Schema generated from pydantic in music-connector and mirrored in zod in the player; the player's CI fails if the two disagree on any field, type, bound or nullability. Readers accept any <code>1.x</code> and ignore unknown fields. Abridged, for the first demo song:</p>
+<pre><code>{
+  "schemaVersion": "1.0",
+  "source": { "sha256": "0e42c0c6…", "durationS": 271.621, "sampleRate": 24000 },
+  "tempo": { "bpm": 100.45, "confidence": 0.45, "beatsPerBar": 4 },
+  "beats": [2.944, 3.563, 4.16, 4.757, …],
+  "downbeats": [2.944, 5.376, …],
+  "energy": { "frameRate": 10, "rms": […], "low": […], "mid": […], "high": […], "loudnessDb": … },
+  "segments": [
+    { "start": 0.0, "end": 22.272, "label": "A", "group": "A", "variant": 0, "energy": 0.732,
+      "descriptors": { "mood": [{ "label": "sad", "cos": 0.274, "z": 2.42 }, …], … } },
+    …
+  ],
+  "descriptors": { "vocals": [{ "label": "male vocals", "z": 1.7 }, { "label": "female vocals", "z": 1.62 }], … }
+}</code></pre>
+  <p class="cap">That last line is a real miss: the singer is a woman. Descriptors reach the prompt only as hints, and the lyrics win.</p>
+  <p>Schema: <a href="https://github.com/karanr17/music-connector/tree/main/schema">music-connector/schema</a> · player mirror: <a href="https://github.com/karanr17/visual-music-player/blob/main/src/analysis/schema.ts">src/analysis/schema.ts</a></p>
+
+  <h2>Does the analysis work? (28 songs)</h2>
+  <p>Measured on audio kept outside the repos; nothing tuned on these songs (settings were chosen on a separate 79-track set).</p>
+  <div class="table"><table>
+    <tr><th>What</th><th>Truth</th><th>Result</th><th>For scale</th></tr>
+    <tr><td>Section boundaries, 13 songs</td><td>SALAMI human annotations, plus my LRC marks for one song</td><td><b>F 0.63</b> at ±3 s</td><td>annotators vs each other 0.82; a boundary every 20 s scores 0.29</td></tr>
+    <tr><td>Repeat labels, same 13</td><td>same</td><td><b>pairwise F 0.66</b></td><td>annotators vs each other 0.70</td></tr>
+    <tr><td>Tempo, 13 tagged songs</td><td>uploader BPM</td><td><b>8 within 4%</b>, 3 off by 2× (or ⅔), 2 wrong</td><td></td></tr>
+    <tr><td>Genre, 15 songs</td><td>uploader tags</td><td>top-1 <b>9/15</b>, top-3 12/15</td><td>24 prompts</td></tr>
+    <tr><td>Instruments, 11 songs</td><td>uploader tags</td><td>top-1 <b>8/11</b>, top-3 9/11</td><td>19 prompts</td></tr>
+    <tr><td>Vocals, 12 songs</td><td>uploader tags</td><td>top-1 <b>9/12</b>, top-3 11/12</td><td>6 prompts</td></tr>
+  </table></div>
+  <p>Misses: it over-segments long jams, verse and chorus can share a letter, tempo has octave errors, and downbeats are unverified (no truth in the set).</p>
+
+  <h2>Does a two-pass "director" help the scene model? No.</h2>
+  <p>An LLM judge (Claude Opus 5.5) scored scene scripts for 10 CC BY songs against a written rubric, 1–10, two samples per script.</p>
+  <div class="table"><table>
+    <tr><th>Pipeline</th><th class="n">Overall (± judge gap)</th><th class="n">Fit</th><th class="n">Structure</th><th class="n">Variety</th><th class="n">Render</th><th class="n">s / song</th><th class="n">$ / song (API equiv.)</th></tr>
+    <tr><td>One pass, Haiku 5.5</td><td class="n">6.22 ± 0.35</td><td class="n"><b>6.5</b></td><td class="n">6.0</td><td class="n">5.5</td><td class="n">6.8</td><td class="n">96</td><td class="n">0.013</td></tr>
+    <tr><td>Two passes v1 (Sonnet director + Haiku)</td><td class="n">6.16 ± 0.23</td><td class="n">6.3</td><td class="n">5.9</td><td class="n">6.0</td><td class="n">6.5</td><td class="n">96</td><td class="n">0.108</td></tr>
+    <tr><td>Two passes v2</td><td class="n">6.22 ± 0.25</td><td class="n">6.2</td><td class="n">6.1</td><td class="n">5.7</td><td class="n"><b>7.0</b></td><td class="n">115</td><td class="n">0.110</td></tr>
+    <tr><td>Ablation: one pass, Sonnet 5.5</td><td class="n"><b>6.26</b> ± 0.28</td><td class="n">6.4</td><td class="n"><b>6.2</b></td><td class="n"><b>6.1</b></td><td class="n">6.4</td><td class="n">38</td><td class="n">0.093</td></tr>
+  </table></div>
+  <p>All within 0.1 of each other, which is less than the judge's disagreement with itself. A null result, kept as one: the two-pass mode ships off by default, and the iteration's value was fixing failures (a long song left half empty), not raising the average.</p>
+
+  <h2>Recommender: Thompson sampling, offline replay</h2>
+  <p>music-connector v2 replaces cosine-to-medoid scoring with a Bayesian linear model per taste cluster (PCA-16 of the embeddings, partial pooling to a global posterior) and samples from it. Replayed in time order on <b>synthetic</b> logs (3,000 songs, 5 logs × 2,000 events, mean ± sd); the owner's own log is too small to replay, and no public dataset ships MuQ-MuLan embeddings.</p>
+  <div class="table"><table>
+    <tr><th></th><th class="n">HR@10</th><th class="n">NDCG@10</th><th class="n">AUC</th><th class="n">Brier</th><th class="n">Oracle like-rate@10</th></tr>
+    <tr><td>random</td><td class="n">0.10</td><td class="n">0.04</td><td class="n">0.50</td><td class="n">0.248</td><td class="n">0.22</td></tr>
+    <tr><td>most-played</td><td class="n">0.44</td><td class="n"><b>0.44</b></td><td class="n">0.61</td><td class="n">0.248</td><td class="n">0.22</td></tr>
+    <tr><td>v1 cosine</td><td class="n">0.43</td><td class="n">0.23</td><td class="n">0.67</td><td class="n">–</td><td class="n">0.36</td></tr>
+    <tr><td>v2 posterior mean</td><td class="n"><b>0.62</b></td><td class="n">0.36</td><td class="n"><b>0.75</b></td><td class="n"><b>0.205</b></td><td class="n"><b>0.73</b></td></tr>
+    <tr><td>v2 Thompson draw</td><td class="n">0.55</td><td class="n">0.29</td><td class="n">0.72</td><td class="n">–</td><td class="n">0.61</td></tr>
+  </table></div>
+  <p>v2 doubles the true like-rate of the top 10 over v1. The Thompson draw scores below the posterior mean offline, as expected: a replay of a fixed log can charge for exploration but never pay it back.</p>
+
+  <h2>Illustrated mode: FLUX on a laptop</h2>
+  <p>The scene model writes one sentence per place; a local CLI renders it with FLUX.1-schnell (4-bit, MLX), cuts the sky with a depth model, splits three parallax layers, and the player re-tones them to each section's palette under its own sky, weather and sprites. Generation never runs in the browser. Measured on an M3 Pro (18 GB), no per-image cost:</p>
+  <div class="table"><table>
+    <tr><th></th><th class="n">512×288 (used)</th><th class="n">768×432</th></tr>
+    <tr><td>Seconds per image, memory free</td><td class="n"><b>13.0</b></td><td class="n">25.4</td></tr>
+    <tr><td>Peak MLX memory</td><td class="n">12.4 GB</td><td class="n">13.6 GB</td></tr>
+    <tr><td>Per demo song, end to end (4–5 plates for 10–12 sections, machine under load)</td><td class="n" colspan="2">2.4–5.2 min</td></tr>
+    <tr><td>Player: re-toning a song's plates on load</td><td class="n" colspan="2">70–85 ms, once</td></tr>
+  </table></div>
+  <p>Returning sections reuse their plate, so a song needs few images. Plates are about 0.1 MB per song.</p>
+
+  <h2>Honest limits</h2>
+  <ul>
+    <li>Audio descriptors are hints, often wrong on vocals, era and genre; energy and tempo come from DSP, and tempo can still be 2× off.</li>
+    <li>The scene eval is an LLM judge on 10 songs. It can say "no measurable difference"; it can't say a script is good.</li>
+    <li>The recommender's eval is synthetic: it shows the model learns what it should on data shaped like a real library, not that it beats v1 on a real listener.</li>
+    <li>The renderer is a closed vocabulary of drawn subjects. When a lyric needs something it lacks, the script picks the nearest picture and logs the miss (<a href="https://github.com/karanr17/visual-music-player/blob/main/docs/vocab-roadmap.md">vocab roadmap</a>).</li>
+    <li>Illustrated plates come from heuristics on top of FLUX: a thin band of generated sky can remain, the horizon is estimated, and roads and rivers stay procedural.</li>
+    <li>The analysis and plate generation need Apple Silicon (or CUDA) and the MuQ-MuLan weights are non-commercial; the hosted demo uses precomputed files.</li>
+    <li>The demo songs' lyric timings for two songs are approximate (Whisper, corrected by hand).</li>
+  </ul>
+
+  <h2 id="credits">Credits</h2>
+  <p>Songs, all <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a> from ccMixter:
+    <a href="https://ccmixter.org/files/SiobhanD/57378">Unbury Your Heart</a>, remix by Siobhan Dakay, lyrics, music and vocals by Madam Snowflake;
+    <a href="https://ccmixter.org/files/Ghost_k/39570">Waking Me Softly</a> by Ghost_k (Ghost Kollective), lyrics and vocals by Madam Snowflake;
+    <a href="https://ccmixter.org/files/mindmapthat/62227">Where the Moon Shines Bright</a>, remix by Kara Square of Mr_Yesterday (D A Ayer, words and vocals) and Stefan Kartenberg (JeffSpeed68).
+    People are drawn from the Liberated Pixel Cup sprites (OGA-BY 3.0 / CC-BY 3.0 / CC0; <a href="https://github.com/karanr17/visual-music-player/blob/main/CREDITS.md">full credits</a>). Plates: FLUX.1-schnell (Apache-2.0) and Depth Anything V2 Small (Apache-2.0). Audio embeddings: MuQ-MuLan (CC BY-NC 4.0).</p>
+  <footer>Code MIT. Built with Claude Code.</footer>
+</main>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral", securityLevel: "strict" });
+</script>
+</body>
+</html>
