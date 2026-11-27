@@ -617,7 +617,7 @@ export class App {
 
   private renderNowPlaying(): void {
     const t = this.tracks[this.index];
-    this.ui.empty.hidden = !!this.tracks.length;
+    this.ui.empty.hidden = !!this.tracks.length || !!this.demo;
     this.ui.title.textContent = t ? t.title || t.file.name : "—";
     const p = this.current;
     const lyr = p ? (p.lyrics.lines.length ? `${p.lyrics.synced ? "synced" : "unsynced"} lyrics · ${p.lyrics.source}` : p.lyrics.instrumental ? "instrumental" : "no lyrics found") : "";
