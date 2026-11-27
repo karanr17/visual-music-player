@@ -101,6 +101,9 @@ export function normalizeCast(v: unknown, misses: string[] = []): CastSpec {
   };
 }
 
+// Long enough for a rich sentence; FLUX's CLIP text encoder stops at 77 tokens anyway.
+const PLATE_MAX = 300;
+
 export function normalizeWorld(v: unknown, misses: string[]): ModelOutput["sections"][number]["world"] {
   const w = isRec(v) ? v : {};
   return {
@@ -109,6 +112,7 @@ export function normalizeWorld(v: unknown, misses: string[]): ModelOutput["secti
     weather: pick(WEATHERS, w.weather, "clear", misses),
     mood: pick(MOODS, w.mood, "serene", misses),
     camera: pick(CAMERAS, w.camera, "drift", misses),
+    plate: typeof w.plate === "string" ? w.plate.trim().slice(0, PLATE_MAX) : "",
   };
 }
 

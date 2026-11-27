@@ -20,3 +20,9 @@ endsong*.json
 # Demo lyrics we have the rights to (CC BY, see docs/demo/).
 !docs/demo/*.lrc
 public/__local/
+
+# scripts/plates (Python, uv)
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

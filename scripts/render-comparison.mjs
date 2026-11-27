@@ -9,6 +9,7 @@
 //
 // Each side can set --{left,right}-reactivity (off / subtle / strong, default subtle) and
 // --{left,right}-analysis (whether that side sees --analysis; by default only the right does).
+// --{left,right}-plates takes a plate set from scripts/plates and draws that side illustrated.
 // Leave out --right for a single picture; --mute drops the audio track.
 //
 // A scene script JSON is what the editor (E) shows, or one entry of "Export all scripts".
@@ -32,6 +33,8 @@ const { values: a } = parseArgs({
     "right-reactivity": { type: "string", default: "subtle" },
     "left-analysis": { type: "boolean", default: false },
     "right-analysis": { type: "boolean", default: true },
+    "left-plates": { type: "string" },
+    "right-plates": { type: "string" },
     mute: { type: "boolean", default: false },
     from: { type: "string", default: "0" },
     to: { type: "string" },
@@ -55,7 +58,7 @@ const page = await browser.newPage();
 // The audio is handed to the page through a routed URL so it never has to be served or committed.
 await page.route("**/__capture/audio", (r) => r.fulfill({ body: readFileSync(a.audio), contentType: "audio/mpeg" }));
 
-async function side(name, scriptPath, title, analysisPath, reactivity) {
+async function side(name, scriptPath, title, analysisPath, reactivity, platesPath) {
   await page.goto(`${a.url}/?capture`);
   await page.waitForFunction(() => "vmpCapture" in window);
   const input = {
@@ -65,8 +68,10 @@ async function side(name, scriptPath, title, analysisPath, reactivity) {
     audioUrl: "/__capture/audio",
     title,
     reactivity,
+    plates: platesPath ? JSON.parse(readFileSync(platesPath, "utf8")) : undefined,
   };
-  await page.evaluate((i) => window.vmpCapture.load(i), input);
+  const loaded = await page.evaluate((i) => window.vmpCapture.load(i), input);
+  if (platesPath && !loaded.plates) throw new Error(`${platesPath} has no plates matching ${scriptPath}`);
   const dir = join(work, name);
   mkdirSync(dir, { recursive: true });
   const n = Math.round((to - from) * fps);
@@ -78,8 +83,8 @@ async function side(name, scriptPath, title, analysisPath, reactivity) {
   return dir;
 }
 
-const left = await side("left", a.left, a["left-title"], a["left-analysis"] ? a.analysis : null, a["left-reactivity"]);
-const right = a.right ? await side("right", a.right, a["right-title"], a["right-analysis"] ? a.analysis : null, a["right-reactivity"]) : null;
+const left = await side("left", a.left, a["left-title"], a["left-analysis"] ? a.analysis : null, a["left-reactivity"], a["left-plates"]);
+const right = a.right ? await side("right", a.right, a["right-title"], a["right-analysis"] ? a.analysis : null, a["right-reactivity"], a["right-plates"]) : null;
 await browser.close();
 
 const inputs = ["-framerate", String(fps), "-i", join(left, "%05d.png")];

@@ -7,6 +7,7 @@ import { sceneLight } from "./lighting";
 import { hash1 } from "./noise";
 import type { WorldParams } from "./palette";
 import { drawBolt, drawParticles, drawStreak, drawWeather } from "./particles";
+import { drawPlate, type PlateLayers } from "./plates";
 import { CELESTIAL, drawSubject, FLYING, type CustomSprite, type Gait, type SpriteCtx } from "./sprites";
 
 export interface LiveSubject {
@@ -52,6 +53,8 @@ export interface SceneState {
   beatPos?: (t: number) => number;
   // Head dip in source pixels for standing figures this frame.
   nod?: number;
+  // Illustrated mode: this section's backdrop plate, drawn in place of the procedural land.
+  plate?: PlateLayers | null;
 }
 
 // How fast the road scrolls during a moment (1 = driving). An empty road is the view from the
@@ -326,7 +329,8 @@ export function renderScene(fb: FB, st: SceneState, t: number, energy: number): 
   const camY = st.camY + shotY;
 
   const ctx: SceneCtx = { fb, p, t, energy, camX: st.camX, camY, tilt, seed: st.seed, travel: st.travel };
-  drawBackdrop(ctx, st.setting);
+  if (st.plate) drawPlate(ctx, st.plate, st.setting);
+  else drawBackdrop(ctx, st.setting);
 
   const g = groundY(st.setting);
   const light = sceneLight(p);

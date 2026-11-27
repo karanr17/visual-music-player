@@ -484,16 +484,22 @@ const SETTINGS: Record<Setting, SettingDraw> = {
   },
 };
 
-export function drawBackdrop(c: SceneCtx, setting: Setting): void {
+// Everything above the land: illustrated plates cut their own sky out and draw over this.
+// `bottom` (logical y) skips the gradient below a line something opaque will cover anyway.
+export function drawSky(c: SceneCtx, setting: Setting, bottom = H): void {
   if (setting === "space") {
     c.fb.clear(scale(c.p.pal.skyTop, 0.35));
   } else if (setting !== "room" && setting !== "club") {
-    skyGradient(c, c.p.pal.skyTop, c.p.pal.skyBot, HORIZON);
+    skyGradient(c, c.p.pal.skyTop, c.p.pal.skyBot, HORIZON, [0, 0, W, Math.max(0, Math.min(H, bottom))]);
     stars(c, c.p.stars);
     celestial(c);
     rays(c);
     clouds(c, c.p.cloud);
   }
+}
+
+export function drawBackdrop(c: SceneCtx, setting: Setting): void {
+  drawSky(c, setting);
   (SETTINGS[setting] ?? SETTINGS.field)(c);
 }
 

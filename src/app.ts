@@ -6,6 +6,7 @@ import { Captions } from "./render/captions";
 import { loadCharacters } from "./render/characters";
 import { demoContent } from "./demo";
 import { Director } from "./render/director";
+import { loadPlates } from "./plates/client";
 import { PH, PW } from "./render/fb";
 import { ambientScript } from "./scene/compile";
 import { SceneScript } from "./scene/schema";
@@ -117,6 +118,7 @@ export class App {
     try {
       this.director.load(prepared.script, this.styleFor(prepared.script));
       this.applyRhythm();
+      void this.applyPlates();
       this.director.dissolveIn(800);
     } catch (err) {
       console.error("[player] couldn't load scene script", err);
@@ -177,6 +179,26 @@ export class App {
     void this.audio.play().catch(() => this.toast("Press ▶ to start playback"));
   }
 
+  // A plate set may arrive on its own, for the song already playing.
+  private async addFiles(list: Track[]): Promise<void> {
+    await this.addTracks(list);
+    await this.applyPlates();
+    this.renderNowPlaying();
+  }
+
+  private plateReq = 0;
+
+  // Illustrated mode: plates for whatever script is on screen, if the song has any. Without
+  // them, or with the toggle off, every section keeps its procedural backdrop.
+  private async applyPlates(): Promise<void> {
+    const script = this.director.loadedScript;
+    const req = ++this.plateReq;
+    const plates = getSettings().illustrated ? await loadPlates(script.trackKey) : null;
+    if (req !== this.plateReq || this.director.loadedScript !== script) return;
+    this.director.setPlates(plates);
+    this.renderNowPlaying();
+  }
+
   private rhythms = new WeakMap<object, Rhythm>();
 
   // The demo reel has no recording to analyse, so it gets a plain grid at its notional tempo.
@@ -207,6 +229,7 @@ export class App {
     this.applyRhythm();
     if (swapped) {
       this.director.load(p.script, this.styleFor(p.script));
+      void this.applyPlates();
       this.director.dissolveIn(1400);
     }
     if (this.pendingPlay === p.track.id && (p.status === "ready" || p.status === "error" || p.status === "ambient")) {
@@ -230,6 +253,7 @@ export class App {
     this.demo = { ...d, t0: performance.now() / 1000 - startT, startT, freeze: q.has("freeze") };
     this.director.load(d.script, this.styleFor(d.script));
     this.applyRhythm();
+    void this.applyPlates();
     this.ui.empty.hidden = true;
     this.ui.title.textContent = "Demo: every setting and transition";
   }
@@ -311,6 +335,7 @@ export class App {
             <option value="off">Beat: off</option><option value="subtle">Beat: subtle</option><option value="strong">Beat: strong</option>
           </select>
           <input type="file" accept="image/*" data-ref-file hidden>
+          <button class="icon" data-plates title="Illustrated: generated backdrop plates, where the song has them (see scripts/plates)">▦</button>
           <button class="icon" data-cc title="Captions (L)">CC</button>
           <button class="icon" data-edit title="Scene editor (E)">✎</button>
           <button class="icon" data-settings title="Settings">⚙</button>
@@ -337,6 +362,7 @@ export class App {
       sub: q("[data-sub]"),
       offset: q("[data-offset]"),
       cc: q("[data-cc]"),
+      plates: q("[data-plates]"),
       model: q("[data-model]"),
       look: q("[data-look]"),
       reactivity: q("[data-reactivity]"),
@@ -349,6 +375,7 @@ export class App {
     this.ui.stage.append(this.sceneCanvas, this.captions.canvas);
     this.captions.canvas.classList.add("captions");
     this.ui.cc.classList.toggle("on", getSettings().captions);
+    this.ui.plates.classList.toggle("on", getSettings().illustrated);
     void rememberedFolderName().then((name) => {
       if (!name || !folderSupported) return;
       this.ui.reopen.textContent = `Reopen “${name}”`;
@@ -366,11 +393,13 @@ export class App {
     this.audio.addEventListener("pause", () => (this.ui.play.textContent = "▶"));
     onSettings((s) => {
       this.ui.cc.classList.toggle("on", s.captions);
+      this.ui.plates.classList.toggle("on", s.illustrated);
       (this.ui.look as HTMLSelectElement).value = s.styleOverride;
       (this.ui.reactivity as HTMLSelectElement).value = s.reactivity;
       this.applyRhythm();
       const script = this.current?.script ?? (this.demo && !this.tracks.length ? this.demo.script : null);
       if (script) this.director.load(script, this.styleFor(script));
+      void this.applyPlates();
     });
 
     this.ui.status.addEventListener("click", () => {
@@ -385,6 +414,7 @@ export class App {
       else if (t.matches("[data-prev]")) void this.play(Math.max(0, this.index - 1));
       else if (t.matches("[data-next]")) void this.play(this.index + 1);
       else if (t.matches("[data-cc]")) updateSettings({ captions: !getSettings().captions });
+      else if (t.matches("[data-plates]")) updateSettings({ illustrated: !getSettings().illustrated });
       else if (t.matches("[data-fs]")) this.toggleFullscreen();
       else if (t.matches("[data-settings], [data-open-settings]")) {
         e.preventDefault();
@@ -420,7 +450,7 @@ export class App {
     this.root.addEventListener("change", (e) => {
       const input = e.target as HTMLInputElement;
       if (input.matches("[data-files]") && input.files) {
-        void tracksFromFiles([...input.files]).then((l) => this.addTracks(l));
+        void tracksFromFiles([...input.files]).then((l) => this.addFiles(l));
         input.value = "";
       }
     });
@@ -445,7 +475,7 @@ export class App {
       dragDepth = 0;
       this.ui.drop.hidden = true;
       const files = [...(e.dataTransfer?.files ?? [])];
-      if (files.length) void tracksFromFiles(files).then((l) => this.addTracks(l));
+      if (files.length) void tracksFromFiles(files).then((l) => this.addFiles(l));
     });
 
     window.addEventListener("keydown", this.onKey);
@@ -550,7 +580,9 @@ export class App {
     const by = p?.status === "ready" && p.script.model ? `scenes: ${modelLabel(p.script.model)}${p.model.includes("+ref:") ? " + reference" : ""}` : "";
     const a = p?.analysis;
     const audio = a ? `${Math.round(a.analysis.tempo.bpm)} BPM · ${a.analysis.segments.length} parts (${a.origin})` : p ? "no audio analysis" : "";
-    this.ui.sub.textContent = [t?.artist, lyr, audio, by].filter(Boolean).join(" · ");
+    const shown = this.director.platesShown;
+    const plates = getSettings().illustrated && p ? (shown ? `illustrated: ${shown}/${p.script.sections.length} sections` : "no plates") : "";
+    this.ui.sub.textContent = [t?.artist, lyr, audio, by, plates].filter(Boolean).join(" · ");
     (this.ui.model as HTMLSelectElement).value = getSettings().model;
     const o = p?.prefs.lyricOffset ?? 0;
     this.ui.offset.textContent = `${o >= 0 ? "+" : ""}${o.toFixed(1)}s`;

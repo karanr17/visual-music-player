@@ -32,3 +32,14 @@ jobs:
       # Includes the check that src/analysis/schema.ts still matches the vendored SongAnalysis schema.
       - run: npm test
       - run: npx vite build
+
+  plates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      # The prompt planning and layer split only; the models need Apple Silicon and ~10 GB.
+      - run: uv run --python 3.12 --no-project --with numpy --with pillow --with opencv-python-headless --with pytest pytest -q tests
+        working-directory: scripts/plates
+        env:
+          PYTHONPATH: .

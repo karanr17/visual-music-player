@@ -6,6 +6,7 @@ import { hash1, noise2, seedOf } from "./noise";
 import { lerpParams, worldParams, type WorldParams } from "./palette";
 import { DEFAULT_CAST } from "../scene/normalize";
 import { PALETTE_LOOKS, postProcess, type Look } from "./style";
+import { matchPlates, PLATE_PAN, quantizePlate, type DecodedPlates, type PlateLayers } from "./plates";
 import { compileSprite, type CustomSprite } from "./sprites";
 import { alignStep, renderScene, SHOT_EASE, travelSpeed, type LiveSubject, type RenderOut, type SceneState } from "./world";
 
@@ -79,6 +80,10 @@ export class Director {
   private rhythm: Rhythm | null = null;
   private reactivity: Reactivity = "off";
   private beatPos: ((t: number) => number) | undefined;
+  private plateSrc: DecodedPlates | null = null;
+  private plates: (PlateLayers | null)[] = [];
+  // Quantising a plate takes tens of milliseconds, and settings changes reload the script.
+  private plateCache = new Map<string, PlateLayers>();
   readonly out = new FB();
 
   constructor(
@@ -102,6 +107,32 @@ export class Director {
     // Carried across sections so a road that continues into the next section keeps rolling.
     this.travelBase = [0];
     for (let i = 1; i < script.sections.length; i++) this.travelBase.push(this.travelBase[i - 1] + this.travelIn(i - 1, script.sections[i].start));
+    this.plates = this.buildPlates();
+  }
+
+  // Illustrated mode: null (or a set made for another script) draws every section procedurally.
+  setPlates(src: DecodedPlates | null): void {
+    if (src !== this.plateSrc) this.plateCache.clear();
+    this.plateSrc = src;
+    this.plates = this.buildPlates();
+  }
+
+  get platesShown(): number {
+    return this.plates.filter(Boolean).length;
+  }
+
+  private buildPlates(): (PlateLayers | null)[] {
+    const src = this.plateSrc;
+    if (!src) return [];
+    return matchPlates(src.set, this.script).map((id, i) => {
+      const img = id ? src.images.get(id) : undefined;
+      if (!id || !img) return null;
+      const params = this.params[i];
+      const key = `${id}|${JSON.stringify(params.pal)}`;
+      let q = this.plateCache.get(key);
+      if (!q) this.plateCache.set(key, (q = quantizePlate(id, img, params)));
+      return q;
+    });
   }
 
 
@@ -202,6 +233,8 @@ export class Director {
       case "static":
         break;
     }
+    // A plate is a finite picture: drifts and slow pans swing back before reaching its edge.
+    if (this.plates[i]) x = PLATE_PAN * Math.sin(x / PLATE_PAN);
     const beat = this.beat(t);
     y += beat ? beat.bump : a.onset * 4;
     return { x, y };
@@ -296,6 +329,7 @@ export class Director {
       stepAlign: this.rhythm ? alignStep : undefined,
       beatPos: this.rhythm ? this.beatPos : undefined,
       nod: this.beat(t)?.nod ?? 0,
+      plate: this.plates[i] ?? null,
     };
   }
 
@@ -345,6 +379,7 @@ export class Director {
       fromShot: A.shot,
       shotSince: k * SHOT_EASE,
       nod: B.nod,
+      plate: k < 0.5 ? A.plate : B.plate,
       pace: this.pace,
       stepAlign: this.rhythm ? alignStep : undefined,
       beatPos: this.rhythm ? this.beatPos : undefined,
@@ -401,8 +436,10 @@ export class Director {
     const same = ss[fi].world.setting === ss[ti].world.setting;
     const e = ease(p);
 
-    if (same && PARAM_BLEND.has(type)) return this.draw(this.out, this.blendStates(A, B, smooth(p)), t, audio);
-    if (!same && (type === "time_shift" || type === "weather_shift")) type = "dissolve";
+    // Two different plates (or one plate in two palettes) can't blend as parameters; they dissolve.
+    const blendable = same && A.plate === B.plate;
+    if (blendable && PARAM_BLEND.has(type)) return this.draw(this.out, this.blendStates(A, B, smooth(p)), t, audio);
+    if (!blendable && (type === "time_shift" || type === "weather_shift")) type = "dissolve";
 
     const out = this.out.data;
     const ad = this.a.data;

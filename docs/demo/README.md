@@ -20,3 +20,19 @@ to `scripts/render-comparison.mjs`.
 
 The scene scripts in the video were written by Claude Sonnet 5.5 through the Claude Code bridge,
 once without and once with the analysis.
+
+## Illustrated mode
+
+[`unbury-your-heart.illustrated.scene.json`](unbury-your-heart.illustrated.scene.json) is a newer
+script for the same song (Claude Sonnet 5.5, one pass, with the analysis) whose worlds carry plate
+prompts, and [`unbury-your-heart.illustrated.plates.json`](unbury-your-heart.illustrated.plates.json)
+is its plate set from `scripts/plates`. Together they make
+[`docs/illustrated-comparison.mp4`](../illustrated-comparison.mp4):
+
+```sh
+node scripts/render-comparison.mjs --audio SiobhanD_-_Unbury_Your_Heart_1.mp3 --lrc docs/demo/unbury-your-heart.lrc \
+  --analysis public/analysis/unbury-your-heart.analysis.json \
+  --left docs/demo/unbury-your-heart.illustrated.scene.json --left-analysis --left-title Procedural \
+  --right docs/demo/unbury-your-heart.illustrated.scene.json --right-title Illustrated \
+  --right-plates docs/demo/unbury-your-heart.illustrated.plates.json --from 52 --to 112 --out docs/illustrated-comparison.mp4
+```

@@ -35,13 +35,17 @@ const Appearance = z.object({
 // lead: the singer / narrator ("I"); partner: the other person ("you", "she", "he"); child: any child.
 const Cast = z.object({ lead: Appearance, partner: Appearance, child: Appearance });
 
+// plate: the model's one-line picture of the place, the prompt for illustrated mode's backdrop.
 const World = z.object({
   setting: z.enum(SETTINGS),
   timeOfDay: z.enum(TIMES),
   weather: z.enum(WEATHERS),
   mood: z.enum(MOODS),
   camera: z.enum(CAMERAS),
+  plate: z.string(),
 });
+// Scripts cached before illustrated mode, and hand-written ones, have no plate prompt.
+const StoredWorld = World.extend({ plate: z.string().optional() });
 
 // What the model returns. Every field is required (no optionals) so structured outputs
 // can't silently omit something; "none" values carry absence instead.
@@ -96,7 +100,7 @@ export const SceneScript = z.object({
         label: z.enum(SECTION_LABELS),
         start: z.number(),
         end: z.number(),
-        world: World,
+        world: StoredWorld,
         transitionIn: z.enum(TRANSITIONS),
         transitionDuration: z.number().min(0).max(8),
         moments: z.array(Moment),
@@ -116,7 +120,7 @@ export const SceneScript = z.object({
 });
 export type SceneScript = z.infer<typeof SceneScript>;
 export type Section = SceneScript["sections"][number];
-export type WorldSpec = z.infer<typeof World>;
+export type WorldSpec = z.infer<typeof StoredWorld>;
 export type SubjectSpec = z.infer<typeof StoredSubject>;
 export type SpriteSpec = z.infer<typeof Sprite>;
 export type AppearanceSpec = z.infer<typeof Appearance>;
