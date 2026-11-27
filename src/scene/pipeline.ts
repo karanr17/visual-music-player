@@ -101,20 +101,32 @@ export async function runPipeline(input: PipelineInput, cfg: PipelineConfig, cal
   const library = input.librarySprites.length
     ? `\n\nPreviously drawn sprites you can reuse with kind "custom": ${input.librarySprites.slice(0, 80).join(", ")}.`
     : "";
-  const { raw, provider } = await call(
-    {
-      system: SCRIPT_PROMPT,
-      prompt: `Title: ${input.track.title || "(unknown)"}\nArtist: ${input.track.artist || "(unknown)"}\n\n${renderNotes(notes, prepared.lines)}${library}\n\nWrite a moment for every line index from 0 to ${prepared.lines.length - 1}.`,
-      schema: scriptJsonSchema(),
-      model: cfg.model,
-      ollamaModel: cfg.ollamaModel,
-      maxTokens: SCRIPT_TOKENS,
-    },
-    signal,
-  );
-  const { script, misses } = normalizeScript(raw, input.librarySprites);
+  const head = `Title: ${input.track.title || "(unknown)"}\nArtist: ${input.track.artist || "(unknown)"}\n\n${renderNotes(notes, prepared.lines)}${library}`;
+  const scriptCall = (ask: string) =>
+    call({ system: SCRIPT_PROMPT, prompt: `${head}\n\n${ask}`, schema: scriptJsonSchema(), model: cfg.model, ollamaModel: cfg.ollamaModel, maxTokens: SCRIPT_TOKENS }, signal);
+  const first = await scriptCall(`Write a moment for every line index from 0 to ${prepared.lines.length - 1}.`);
+  const { provider } = first;
+  let { script, misses } = normalizeScript(first.raw, input.librarySprites);
+  // Smaller models sometimes stop partway through a long song; ask again for what's missing
+  // rather than leave minutes of it on one held picture.
+  const missing = missingLines(script.moments, prepared.lines.length);
+  if (missing.length > Math.max(3, prepared.lines.length * 0.1)) {
+    const more = await scriptCall(`Earlier moments are already written. Write a moment for each of these line indices only: ${missing.join(", ")}.`);
+    const extra = normalizeScript(more.raw, input.librarySprites);
+    script = {
+      moments: [...script.moments, ...extra.script.moments],
+      sprites: [...script.sprites, ...extra.script.sprites.filter((x) => !script.sprites.some((y) => y.name === x.name))].slice(0, 2),
+      unmapped: [...new Set([...script.unmapped, ...extra.script.unmapped])],
+    };
+    misses = [...misses, ...extra.misses];
+  }
   if (misses.length) console.warn("[scenes] values outside the vocabulary were replaced:", misses);
   return { output: mergePasses(notes, script), provider, notes, prepared };
+}
+
+export function missingLines(moments: { line: number }[], lineCount: number): number[] {
+  const have = new Set(moments.map((m) => m.line));
+  return Array.from({ length: lineCount }, (_, i) => i).filter((i) => !have.has(i));
 }
 
 export function compileResult(r: PipelineResult, duration: number, trackKey: string): SceneScript {

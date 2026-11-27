@@ -3,7 +3,7 @@ import {
   arr, isRec, normalizeCast, normalizeMoment, normalizeSprites, normalizeWorld, num, pick, type MomentOut,
 } from "./normalize";
 import { ModelOutput } from "./schema";
-import { EVENTS, MOTIONS, PARTICLES, POSITIONS, SECTION_LABELS, SHOTS, STYLES, SUBJECTS, TRANSITIONS } from "./vocab";
+import { EVENTS, MOTIONS, PARTICLES, POSITIONS, SECTION_LABELS, SETTINGS, SHOTS, STYLES, SUBJECTS, TIMES, TRANSITIONS, WEATHERS } from "./vocab";
 
 // Two-pass generation. The director (a stronger model) reads the song and plans it: what it's
 // about, how it develops, who is in it, the sections with their worlds, and a shot per line.
@@ -26,6 +26,10 @@ Write:
 
 Rules:
 - Be literal where the lyrics are concrete: a song that names a sunflower, a ship or a phone shows that thing. Settings follow places the lyrics mention.
+- Show what a line asserts, not what it negates or compares against: "not like children" doesn't put children on screen, "I'm not afraid of the storm" is about courage, not weather.
+- Keep the song's tone in every section. A love song about the end of the world stays shadowed by the end even in its chorus; an upbeat song about heartbreak stays bittersweet. Don't let a chorus turn into a generic happy montage.
+- Only the people the song has: no child unless the lyrics mention one, no partner on screen for a song sung alone to the world. Who is singing stays the same person throughout.
+- Give most lines a picture with two or three things in it: a person doing something, plus an object or a feature of the place. A single object alone is for the few lines that are about that object.
 - If the prompt has an Audio section, follow it: every (instrumental) line starts its own section with a world of its own; sections over the same structure letter are the same music returning and get the same label and world (a chorus returns to its place); let the quiet parts be calm and wide and save the strongest images for the loudest parts. Its sound impressions are hints that are often wrong; the lyrics win.
 - Vary the worlds across the song the way the feeling changes, but keep it one film: two to five distinct settings is usually right.
 - Heavy themes (violence, drugs, self-harm, abuse, sex) are pictured through metaphor and atmosphere: storms, wilted flowers, chains, a lone figure, a fading light. Never literally.
@@ -34,13 +38,16 @@ Rules:
 export const SCRIPT_PROMPT = `You turn a director's plan into the moments a small pixel-art engine draws while a song plays. The director has already decided the sections, their worlds and a shot and focus for every line. Your job is to realise each focus with the engine's fixed vocabulary.
 
 For every line index, write one moment:
-- subjects: the full set visible during that line (not a diff), 0-4 of them; fewer is calmer. Keep subjects that should persist from the previous line so people don't pop in and out, add what the line introduces, drop what should leave. Realise the director's focus as closely as the vocabulary allows.
-- position: left/center/right are on the ground, far is small in the distance, sky is up high, foreground is close and large. motion: walk, drift, sway, rise, fall, fly, spin or still.
+- subjects: the full set visible during that line (not a diff). Most lines have two or three: the person the focus names, plus an object or a feature of the place; one alone only when the director's focus is a single thing. Keep subjects that should persist from the previous line so people don't pop in and out, add what the line introduces, drop what should leave. Realise the director's focus as closely as the vocabulary allows.
+- The singer is one person: within a section keep the same figure for them (lone_figure, walking_figure, sitting_figure, reaching_figure, dancer, figure_with_umbrella) unless the line changes what they do.
+- The place itself is already drawn by the section's world (setting, time, weather): never list a setting, a time of day or a weather as a subject or as unmapped.
+- Don't add props that the line doesn't call for. If the focus can't be drawn, show the person and the place rather than an unrelated object.
+- position: left/center/right are on the ground, far is small in the distance, sky is up high (only for things that fly or shine: sun, moon, stars, birds, kites, balloons, planets), foreground is close and large. motion: walk, drift, sway, rise, fall, fly, spin or still.
 - focus: true on exactly one subject when the director's focus points at something in particular (it is lit from behind and fills a close shot); false everywhere else, and on all subjects of a purely atmospheric line.
 - Figures are the song's cast: single figures (lone_figure, walking_figure, sitting_figure, reaching_figure, dancer, figure_with_umbrella) are the lead, couples are lead and partner, child is the child.
 - road and river run into the distance: walk or drift there means travelling along them. An empty road reads as the view from a moving car; a car on it means driving.
 - particles add atmosphere for that line; event is a one-shot accent (use sparingly, for the strongest lines). intensity 0-1 is how charged the line is.
-- When the focus names something the vocabulary lacks, pick the closest drawable picture and add the missing thing (a short noun phrase, e.g. "lighthouse beam", "broken mirror") to unmapped.
+- When the focus names a thing the vocabulary lacks, pick the closest drawable picture and add the missing thing to unmapped as a bare noun phrase of one to three words ("lighthouse beam", "broken mirror"), with no notes or line numbers.
 - Only for a small prop that is central to the song and missing from the vocabulary (a ring, a key on a chain, a paper boat) you may draw a sprite: at most 2 per song, 8-16 pixels on each side, a palette of 3-6 hex colours with a dark outline first, rows of equal length where "." is transparent and digits index the palette. Use it with kind "custom" and custom set to its name; for every other subject custom is "". Previously drawn sprites listed in the prompt can be reused the same way.`;
 
 const World = ModelOutput.shape.sections.element.shape.world;
@@ -149,8 +156,22 @@ export function normalizeScript(raw: unknown, librarySprites: string[] = []): { 
   const sprites = normalizeSprites(r.sprites).slice(0, 2);
   const known = new Set([...sprites.map((s) => s.name), ...librarySprites]);
   const moments = arr(r.moments).filter(isRec).map((m) => normalizeMoment(m, known, misses));
-  const unmapped = arr(r.unmapped).filter((u): u is string => typeof u === "string");
-  return { script: { moments, sprites, unmapped: [...unmapped, ...misses] }, misses };
+  return { script: { moments, sprites, unmapped: cleanUnmapped([...arr(r.unmapped).filter((u): u is string => typeof u === "string"), ...misses]) }, misses };
+}
+
+const VOCAB_WORDS = new Set<string>([...SETTINGS, ...TIMES, ...WEATHERS, ...SUBJECTS].flatMap((v) => [v, v.replace(/_/g, " ")]));
+
+// The unmapped log feeds the vocabulary roadmap, so it should hold things the engine can't draw,
+// as short nouns: notes in brackets, line numbers and names of things already in the vocabulary
+// (a model listing "rooftop" because the setting isn't a subject) are noise.
+export function cleanUnmapped(items: string[]): string[] {
+  const out = new Set<string>();
+  for (const raw of items) {
+    const u = raw.replace(/\(.*?\)|\[.*?\]/g, "").replace(/[:;].*$/, "").replace(/\b(lines?|at) \d[\d\s,-]*/gi, "").trim().toLowerCase().replace(/\s+/g, " ");
+    if (!u || u.split(" ").length > 4 || VOCAB_WORDS.has(u) || VOCAB_WORDS.has(u.replace(/ /g, "_"))) continue;
+    out.add(u);
+  }
+  return [...out];
 }
 
 // The director owns the structure (sections, worlds, transitions, shots, style, cast); the script

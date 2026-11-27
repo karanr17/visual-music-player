@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { directorJsonSchema, mergePasses, normalizeDirector, normalizeScript, renderNotes, scriptJsonSchema } from "./director";
+import { cleanUnmapped, directorJsonSchema, mergePasses, normalizeDirector, normalizeScript, renderNotes, scriptJsonSchema } from "./director";
 import { ModelOutput } from "./schema";
 
 const world = { setting: "beach", timeOfDay: "dusk", weather: "clear", mood: "warm", camera: "drift" };
@@ -92,5 +92,30 @@ describe("merging the passes", () => {
     const text = renderNotes(notes, Array.from({ length: 6 }, (_, i) => ({ t: i * 4, text: `line ${i}` })));
     expect(text).toMatch(/\[4\] line 4 {2}→ {2}close: a letter/);
     expect(text).toMatch(/\[0\] line 0$/m);
+  });
+});
+
+describe("unmapped log", () => {
+  it("keeps short nouns the engine lacks and drops notes and vocabulary names", () => {
+    expect(
+      cleanUnmapped([
+        "Lighthouse Beam",
+        "rooftop",
+        "rain",
+        "storm cloud",
+        "factory (lines 17, 20, 35; drawn as houses)",
+        "figure's long shadow stretching across the whole empty road at night",
+        "barrel (line 12)",
+        "lighthouse beam",
+        "river",
+      ]),
+    ).toEqual(["lighthouse beam", "storm cloud", "factory", "barrel"]);
+  });
+});
+
+describe("missing lines", async () => {
+  const { missingLines } = await import("./pipeline");
+  it("lists the line indices with no moment", () => {
+    expect(missingLines([{ line: 0 }, { line: 2 }, { line: 2 }], 5)).toEqual([1, 3, 4]);
   });
 });
