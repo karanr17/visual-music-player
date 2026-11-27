@@ -50,10 +50,9 @@ reports (the runs used a Claude subscription, not API credits).
   the others, is the fastest (38 s against 96-115 s) and costs less than the two-pass pipeline.
   The baseline is by far the cheapest.
 
-The player keeps the two-pass pipeline (the owner asked for it, and it gives the most renderable
-scripts) behind **Settings → Plan first**, with the director model configurable. Given these
-numbers, a single pass on Sonnet or the baseline are equally good defaults; that is the owner's
-call.
+Given these numbers the player defaults to a single pass, as on `main`, and keeps the two-pass
+pipeline as an opt-in (**Settings → Plan first**, director model configurable) for listeners who
+want the most renderable scripts. Picking Sonnet as the script model gives the one-pass-Sonnet row.
 
 ## Method
 

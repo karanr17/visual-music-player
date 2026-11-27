@@ -96,7 +96,7 @@ Choose *Off* to get ambient scenes with no LLM at all.
 
 ### Two passes: director, then script
 
-With **Settings → Plan first** on (the default), a scene script takes two calls:
+**Settings → Plan first** (off by default) makes a scene script take two calls:
 
 1. A **director** model (Claude Sonnet 5.5 by default; set per provider, including an Ollama model)
    reads the lyrics and the audio analysis and writes a plan: a logline, how the song develops, the
@@ -125,11 +125,12 @@ and renderability, 1-10, two samples per script. Method, per-song pairing and li
 | two passes v2 (this branch) | 6.22 ± 0.25 | 6.2 | 6.1 | 5.7 | **7.0** | 2.4 | 115 | 0.110 |
 | ablation: one pass, Sonnet 5.5 | **6.26** ± 0.28 | 6.4 | **6.2** | **6.1** | 6.4 | 2.2 | 38 | 0.093 |
 
-Honest reading: no pipeline is measurably better overall; the differences (≤ 0.1) are smaller
-than the judge's disagreement with itself. The two-pass pipeline gives the most renderable and
-most consistent scripts but reads the lyrics slightly less well than one pass, and one pass on the
-stronger model does as well for less time and money. The v1 → v2 iteration fixed real failures (a
-long song left half empty, a noisy unmapped log) rather than raising the average. What scripts
+The eval found no overall difference: the scores are within 0.1 of each other, less than the
+judge's disagreement with itself, and a single pass on Sonnet matches the two-pass pipeline for
+less time and money. That is why Plan first is off by default. Within the tie, the two-pass
+pipeline gives the most renderable and most consistent scripts but reads the lyrics slightly less
+well than one pass. The v1 → v2 iteration fixed real failures (a long song left half empty, a
+noisy unmapped log) rather than raising the average. What scripts
 asked for and couldn't draw is collected in [docs/vocab-roadmap.md](docs/vocab-roadmap.md); four
 of those (record player, factory, volcano, cow) are now in the vocabulary.
 

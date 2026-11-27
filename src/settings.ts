@@ -63,7 +63,8 @@ const DEFAULTS: Settings = {
   styleOverride: "auto",
   referenceForScenes: true,
   waitForScenes: true,
-  twoPass: true,
+  // Opt-in: the eval (docs/eval) found no overall gain over one pass, at about 8x the cost.
+  twoPass: false,
   directorModel: "claude-sonnet-5-5",
   ollamaDirectorModel: "",
   useAnalysis: true,
