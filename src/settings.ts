@@ -26,6 +26,8 @@ export interface Settings {
   reactivity: Reactivity;
   // Base URL of music-connector's `mc serve`; empty means don't ask it for audio analysis.
   analysisUrl: string;
+  // Draw generated backdrop plates (scripts/plates) where a song has them.
+  illustrated: boolean;
 }
 
 export const LOOK_LABELS: Record<Style, string> = {
@@ -70,6 +72,7 @@ const DEFAULTS: Settings = {
   useAnalysis: true,
   reactivity: "subtle",
   analysisUrl: DEFAULT_ANALYSIS_URL,
+  illustrated: false,
 };
 
 const KEY = "vmp.settings";

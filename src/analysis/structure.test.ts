@@ -21,6 +21,7 @@ const world = (setting: ModelOutput["sections"][number]["world"]["setting"]) => 
   weather: "clear" as const,
   mood: "warm" as const,
   camera: "drift" as const,
+  plate: `a ${setting} at dusk`,
 });
 
 function section(label: ModelOutput["sections"][number]["label"], fromLine: number, toLine: number, setting: Parameters<typeof world>[0]) {

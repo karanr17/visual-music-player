@@ -1,5 +1,6 @@
 import { parseBlob } from "music-metadata";
 import { addLooseSidecars } from "../analysis/client";
+import { addPlateFiles, PLATES_EXT } from "../plates/client";
 import { dbGet, dbPut } from "../db";
 
 export interface Track {
@@ -156,6 +157,7 @@ export async function tracksFromFiles(files: File[]): Promise<Track[]> {
     loose.delete(sidecars[0]);
   }
   addLooseSidecars([...loose]);
+  await addPlateFiles(files);
   return tracks;
 }
 
@@ -178,7 +180,7 @@ async function collectFiles(dir: DirHandle, out: File[], depth = 0): Promise<voi
   if (depth > 6) return;
   for await (const entry of dir.values()) {
     if (entry.kind === "file") {
-      if (AUDIO_EXT.test(entry.name) || LRC_EXT.test(entry.name) || ANALYSIS_EXT.test(entry.name)) {
+      if (AUDIO_EXT.test(entry.name) || LRC_EXT.test(entry.name) || ANALYSIS_EXT.test(entry.name) || PLATES_EXT.test(entry.name)) {
         out.push(await (entry as FileSystemFileHandle).getFile());
       }
     } else {

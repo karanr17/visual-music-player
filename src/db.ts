@@ -1,12 +1,12 @@
 const DB_NAME = "visual-music-player";
-const STORES = ["scripts", "songPrefs", "kv", "unmapped", "sprites", "analysis"] as const;
+const STORES = ["scripts", "songPrefs", "kv", "unmapped", "sprites", "analysis", "plates"] as const;
 type Store = (typeof STORES)[number];
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
 function open(): Promise<IDBDatabase> {
   dbPromise ??= new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 3);
+    const req = indexedDB.open(DB_NAME, 4);
     req.onupgradeneeded = () => {
       for (const s of STORES) if (!req.result.objectStoreNames.contains(s)) req.result.createObjectStore(s);
     };

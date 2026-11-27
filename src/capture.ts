@@ -6,6 +6,8 @@ import { Captions, CH, CW } from "./render/captions";
 import { loadCharacters } from "./render/characters";
 import { Director } from "./render/director";
 import { PH, PW } from "./render/fb";
+import { decode } from "./plates/client";
+import { PlateSet } from "./render/plates";
 import { SceneScript } from "./scene/schema";
 
 // ?capture: renders a scene script frame by frame at exact times, for videos and comparisons
@@ -21,6 +23,8 @@ export interface CaptureInput {
   title: string;
   // Default "subtle"; "off" renders as the player did before beat reactivity.
   reactivity?: Reactivity;
+  // A plate set from scripts/plates: renders in illustrated mode.
+  plates?: unknown;
 }
 
 const COLORS: Record<string, string> = {
@@ -46,7 +50,7 @@ class Capture {
   private img = new ImageData(PW, PH);
   private out = Object.assign(document.createElement("canvas"), { width: CW, height: CH + STRIP });
 
-  async load(input: CaptureInput): Promise<{ sections: number; duration: number }> {
+  async load(input: CaptureInput): Promise<{ sections: number; duration: number; plates: number }> {
     await loadCharacters();
     await document.fonts?.ready;
     this.script = SceneScript.parse(input.script);
@@ -62,7 +66,8 @@ class Capture {
     this.director.setEnergyIntegral((t) => energyIntegral(this.env, t));
     this.rhythm = this.analysis ? new Rhythm(this.analysis) : null;
     this.director.setRhythm(this.rhythm, input.reactivity ?? "subtle");
-    return { sections: this.script.sections.length, duration };
+    this.director.setPlates(input.plates ? await decode(PlateSet.parse(input.plates)) : null);
+    return { sections: this.script.sections.length, duration, plates: this.director.platesShown };
   }
 
   frame(t: number): string {

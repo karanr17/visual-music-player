@@ -484,7 +484,8 @@ const SETTINGS: Record<Setting, SettingDraw> = {
   },
 };
 
-export function drawBackdrop(c: SceneCtx, setting: Setting): void {
+// Everything above the land: illustrated plates cut their own sky out and draw over this.
+export function drawSky(c: SceneCtx, setting: Setting): void {
   if (setting === "space") {
     c.fb.clear(scale(c.p.pal.skyTop, 0.35));
   } else if (setting !== "room" && setting !== "club") {
@@ -494,6 +495,10 @@ export function drawBackdrop(c: SceneCtx, setting: Setting): void {
     rays(c);
     clouds(c, c.p.cloud);
   }
+}
+
+export function drawBackdrop(c: SceneCtx, setting: Setting): void {
+  drawSky(c, setting);
   (SETTINGS[setting] ?? SETTINGS.field)(c);
 }
 
