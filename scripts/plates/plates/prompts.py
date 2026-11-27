@@ -62,7 +62,6 @@ class SectionPlate:
     script_prompt: str
     # The full FLUX prompt, or None for settings that stay procedural.
     prompt: str | None
-    # Sections with the same key share one plate.
     key: str | None
 
 

@@ -33,6 +33,10 @@ subjects kept above the captions and player bar. Both sides are `?demo&t=…&fre
   downbeats, strong beats nudge the camera, standing figures nod along, and particles follow the
   high band. **Beat** in the player bar sets it to off, subtle (default) or strong. See
   [Music-driven animation](#music-driven-animation).
+- Optional **illustrated mode**: a backdrop plate per section world, generated once per song on
+  your own Mac with FLUX.1-schnell, split into parallax layers and redrawn in the song's palette,
+  with the procedural sky, weather, particles and people on top. **▦** in the player bar turns it
+  on. See [Illustrated mode](#illustrated-mode).
 - Kinetic pixel captions, section transitions, and a JSON scene editor with export/import.
 - A built-in `?demo` showcase that needs no audio files and no LLM.
 
@@ -61,6 +65,7 @@ Other scripts:
 | `npm run preview` | serve the built `dist/` |
 | `scripts/check-secrets.sh` | the no-secrets check CI runs (add `--history` to scan every commit) |
 | `node scripts/render-comparison.mjs …` | render two scene scripts for one song side by side into an mp4 (see the script's header) |
+| `cd scripts/plates && uv run plates generate song.scene.json` | generate illustrated-mode plates for a scene script (see [Illustrated mode](#illustrated-mode)) |
 | `node scripts/build-characters.mjs <lpc>` | rebuild the character atlas from a checkout of the LPC generator (see [CREDITS.md](CREDITS.md)) |
 
 ## The `?demo` showcase
@@ -260,6 +265,109 @@ separately, so you can compare).
 `npm test` fails if the two disagree on any field name, requirement, type, nullability or bound.
 Readers accept any `1.x` file and ignore fields they don't know; a `2.x` file is rejected. To take
 a new minor version, copy the new schema file over the vendored one and run `npm test`.
+
+## Illustrated mode
+
+[![Procedural backdrops (left) and illustrated plates (right) on the same scene script](docs/illustrated-comparison.png)](docs/illustrated-comparison.mp4)
+
+*[docs/illustrated-comparison.mp4](docs/illustrated-comparison.mp4) (1:00, with sound): the same
+scene script drawn with the procedural backdrops (left) and with generated plates (right). The
+sky, sun and moon, weather, particles, people and objects are the same on both sides; only the
+land behind them changes. The flower field in the second still returns at dawn later in the song
+from the same plate, re-toned for that time of day. Song: "Unbury Your Heart" by Siobhan Dakay
+feat. Madam Snowflake, CC BY 3.0; script and plates are in [docs/demo](docs/demo/README.md).*
+
+The procedural backdrops are cheap, seekable and always in sync, but they are 70% of the frame and
+read as programmer art. Illustrated mode keeps the engine and swaps only the land:
+
+1. **The scene script asks for it.** Each section's world now carries `plate`, one sentence from
+   the scene model describing the place as a painting ("a wide field of wildflowers running to low
+   hills under a glowing amber and rose sky, one old tree on the horizon"), with no people, which
+   the engine draws itself. Sections that return to a world repeat its text.
+2. **A local CLI makes the plates** (`scripts/plates`, Python with uv). For every distinct place
+   in a script it runs [FLUX.1-schnell](https://huggingface.co/black-forest-labs/FLUX.1-schnell)
+   (Apache-2.0, 4-bit, on MLX via [mflux](https://github.com/filipstrand/mflux)) at 512×288 with
+   a pixel-art game-background prompt, then
+   [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small-hf)
+   (Apache-2.0) for depth. From that it cuts out the sky (a flood fill from the top edge that
+   follows smooth colour and stops at far depth and strong edges, plus any moon or sun disc),
+   splits the land into far, middle and near layers by depth, inpaints what each nearer layer
+   hides, measures where the ground meets the sky, and writes everything, at 384×216, into one
+   `song.plates.json` next to the script (about 0.1 MB per song).
+3. **The player draws them** when **▦** is on and the song has plates. Each layer is mapped onto the
+   section's palette at load: brightness onto the world's tones for its time of day and mood, the
+   plate's own main colours pulled toward them, then ordered dithering, so the plates sit in the
+   same palette as the sprites and the same plate works at dusk and at dawn. The layers move with
+   the camera at three depths, the plate's horizon lands on the engine's horizon so people stand
+   on its ground, and the sky, sun, moon, stars, clouds, weather and particles stay procedural on
+   top. A drift or slow pan swings back before it reaches the plate's edge.
+
+A section that comes back (same recurrence group from the audio analysis, same setting), or names
+the same place in the same words, reuses its plate, so a song of 10-12 sections needed 4-5 images.
+Road and river sections keep their procedural backdrop, because their ground scrolls toward the
+viewer; rooms are one flat layer. Rendering stays a pure function of time, so seeking and
+frame-by-frame capture land on the same picture (a test checks it with plates on).
+
+Generation never runs in the browser or from the hosted app: the player only reads plate files.
+With **▦** off, or for a song without plates, or for sections a plate file doesn't match (edited
+or regenerated scripts), the player draws exactly what it drew before.
+
+### Make plates for a song
+
+```sh
+# 1. In the player, open the scene editor (E) and save the script JSON, e.g. song.scene.json.
+# 2. On an Apple Silicon Mac (first run downloads ~9 GB of FLUX weights and ~100 MB for depth):
+cd scripts/plates
+uv run plates generate path/to/song.scene.json            # writes path/to/song.plates.json
+uv run plates generate path/to/song.scene.json --dry-run  # just print the prompts
+# 3. Drop song.plates.json onto the player (with or without the audio) and press ▦.
+```
+
+Plates are cached in the browser (IndexedDB, by the script's track key) and in the plate file:
+re-running after editing one section regenerates only that section's plate. `--raw-dir DIR` keeps
+the raw FLUX images, and `--resplit` redoes the depth and layer split from them without
+regenerating. `scripts/render-comparison.mjs --right-plates song.plates.json` renders a side by
+side like the one above.
+
+The default weights are
+[`dhairyashil/FLUX.1-schnell-mflux-4bit`](https://huggingface.co/dhairyashil/FLUX.1-schnell-mflux-4bit),
+a 4-bit conversion of the same Apache-2.0 model, because Black Forest Labs' own repository needs a
+Hugging Face login and licence click-through. `--model` takes any mflux FLUX.1-schnell checkpoint
+or local path.
+
+### Cost and latency
+
+Measured on a MacBook Pro M3 Pro (18 GB), 4 denoising steps, nothing to pay per image:
+
+| | 512×288 (used) | 768×432 |
+|---|---|---|
+| Seconds per image, memory free | **13.0** (12.6-13.1, n=4) | 25.4 (24.8-26.3, n=4) |
+| Peak MLX memory | 12.4 GB | 13.6 GB |
+
+| Step | Time |
+|---|---|
+| First image after start (reads the 9 GB of weights) | 15 s |
+| Depth model load, first run | 14 s |
+| Depth + sky cut + layer split + inpainting | 0.5 s per plate |
+| The three CC BY demo songs, end to end (12, 10, 10 sections → 5, 5, 4 plates) | 2.4, 3.7, 5.2 min |
+| Player: re-toning all of a song's plates on load | 70-85 ms, once |
+| Player: frame time, procedural vs illustrated (Node, same frames) | 6.5-11.0 vs 7.4-12.7 ms |
+
+The end-to-end runs were 28, 43 and 75 s per image rather than 13, because they ran next to a
+browser, an IDE and other jobs, and FLUX's 12 GB working set pushed an 18 GB Mac into swap (one
+image took 186 s). Close other apps, or stop `mc serve` if it has MuQ loaded, before generating.
+768×432 looked no better once reduced to plate size, so the CLI uses 512×288.
+
+### Limits
+
+- The plates are FLUX's idea of the place, not the lyrics': the scene model writes the sentence,
+  but FLUX.1-schnell follows the setting and light more reliably than specific objects.
+- The sky cut is a heuristic. It can leave a thin band of the generated sky above the horizon,
+  or a glow round a moon it removed, and in a dark night scene it can take a skyline that is
+  nearly the sky's colour.
+- The plate's horizon is estimated (the first row that is land almost all the way across), so in
+  a valley or on a hilltop people can stand a little above or below the painted ground.
+- Apple Silicon only, as written (MLX); about 12 GB of free memory to run well.
 
 ## Keyboard
 

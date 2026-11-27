@@ -89,7 +89,6 @@ function tones(p: WorldParams): RGB[] {
   return t.sort((a, b) => lum(a) - lum(b));
 }
 
-// The gradient map: the tone at this colour's brightness.
 function toneAt(t: RGB[], r: number, g: number, b: number): RGB {
   const pos = ((0.299 * r + 0.587 * g + 0.114 * b) / 255) * (t.length - 1);
   const j = Math.min(t.length - 2, Math.floor(pos));
@@ -174,6 +173,7 @@ export function quantizePlate(id: string, img: PlateImage, p: WorldParams): Plat
         out[i] = pack(pal[bayer(x, y) < t ? c : a]);
       }
     }
+    if (li === 0 && n > 1 && img.horizon !== null) fadeTop(out);
     return out;
   });
   const top = img.horizon === null ? OY : Math.round(Math.min(OY_MAX, Math.max(OY_MIN, img.horizon - HORIZON)));
@@ -186,6 +186,25 @@ export function quantizePlate(id: string, img: PlateImage, p: WorldParams): Plat
     return r;
   });
   return { id, layers, top, rows };
+}
+
+// The sky cut can leave a band of the generated sky above the far hills, in a texture unlike the
+// procedural sky's. Dithering the far layer out over its top few pixels lets the two meet as haze.
+const FADE = 5;
+
+function fadeTop(layer: Uint32Array): void {
+  for (let x = 0; x < PLATE_W; x++) {
+    let run = 0;
+    for (let y = 0; y < PLATE_H; y++) {
+      const i = y * PLATE_W + x;
+      if (!layer[i]) {
+        run = 0;
+        continue;
+      }
+      if (run < FADE && bayer(x, y) >= (run + 1) / (FADE + 1)) layer[i] = 0;
+      run++;
+    }
+  }
 }
 
 // How far each layer, far to near, slides with the camera; matches the procedural ridges.
