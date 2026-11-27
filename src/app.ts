@@ -11,12 +11,19 @@ import { loadPlates } from "./plates/client";
 import { PH, PW } from "./render/fb";
 import { ambientScript } from "./scene/compile";
 import { SceneScript } from "./scene/schema";
-import { claudeCodeAvailable } from "./scene/interpret";
+import { BRIDGE_PRESENT, claudeCodeAvailable } from "./scene/interpret";
 import { SceneService, type Prepared, type SceneStatus } from "./scene/service";
 import { exportAll, importAll, savePrefs, unmappedCounts } from "./scene/store";
 import { STYLES } from "./scene/vocab";
 import { currentReference, loadReference, setReferenceImage } from "./reference";
 import { CLAUDE_MODELS, getSettings, LOOK_LABELS, modelLabel, onSettings, updateSettings, type Provider, type Settings } from "./settings";
+
+// Whether any Claude route can run, which is all the player-bar model picker chooses between. The
+// hosted build has no bridge, so without an API key there it would only offer a failing switch.
+function claudeReachable(s: Settings): boolean {
+  if (s.provider === "off" || s.provider === "ollama") return false;
+  return (s.provider !== "claude" && BRIDGE_PRESENT) || (s.provider !== "claude-code" && !!s.apiKey);
+}
 
 // 60 fps when the machine keeps up; heavy scenes on slow machines fall back to 30.
 const FAST_MS = 1000 / 60;
@@ -419,6 +426,7 @@ export class App {
     this.captions.canvas.classList.add("captions");
     this.ui.cc.classList.toggle("on", getSettings().captions);
     this.ui.plates.classList.toggle("on", getSettings().illustrated);
+    this.ui.model.hidden = !claudeReachable(getSettings());
     void rememberedFolderName().then((name) => {
       if (!name || !folderSupported) return;
       this.ui.reopen.textContent = `Reopen “${name}”`;
@@ -437,6 +445,7 @@ export class App {
     onSettings((s) => {
       this.ui.cc.classList.toggle("on", s.captions);
       this.ui.plates.classList.toggle("on", s.illustrated);
+      this.ui.model.hidden = !claudeReachable(s);
       (this.ui.look as HTMLSelectElement).value = s.styleOverride;
       (this.ui.reactivity as HTMLSelectElement).value = s.reactivity;
       this.applyRhythm();
@@ -529,7 +538,13 @@ export class App {
 
   private onKey = (e: KeyboardEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest("input, textarea, select") || this.isOpen("settings") || this.isOpen("editor")) return;
+    // A player-bar select keeps focus after a click, and its type-ahead would turn a key press
+    // into a model or look switch ("s" picks Sonnet). Letters there are the player's shortcuts;
+    // arrows and space still work the select.
+    const barLetter = target.matches(".bar select") && e.key.length === 1 && e.key !== " " && !e.metaKey && !e.ctrlKey && !e.altKey;
+    if (barLetter) e.preventDefault();
+    else if (target.closest("input, textarea, select")) return;
+    if (this.isOpen("settings") || this.isOpen("editor")) return;
     const a = this.audio;
     switch (e.key) {
       case " ":

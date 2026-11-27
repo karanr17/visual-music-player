@@ -27,13 +27,21 @@ DISC_LUMA = 190
 DISC_BELOW = 6
 # Share of a row that must be land for it to count as the horizon.
 HORIZON_COVER = 0.9
+# Sky probability from the semantic segmenter above which a far pixel joining the sky is sky.
+# Pixel-art skies come in bands whose steps stop the colour fill; at 0.8 faint distant towers
+# started to go too.
+SKY_PROB = 0.9
 
 
-def sky_mask(rgb: np.ndarray, depth: np.ndarray) -> np.ndarray:
+def sky_mask(rgb: np.ndarray, depth: np.ndarray, sky_prob: np.ndarray | None = None) -> np.ndarray:
     """True for the sky: the smooth, far region reached from the top edge. Depth alone also takes
     distant mountains and skylines, which are the plate's best part, so the fill follows colour
     and depth only bounds it. Anything enclosed by sky (sun, moon, stars, clouds) is sky too: the
-    player draws its own."""
+    player draws its own.
+
+    The fill stops at the colour steps between a pixel-art sky's bands, leaving a strip of sunset
+    above the hills that the player then shows as a seam. sky_prob (a segmenter's per-pixel sky
+    probability) carries the sky on through far pixels it is sure of, from where the fill got to."""
     h, w = depth.shape
     img = cv2.GaussianBlur(rgb, (5, 5), 0)
     # Strong edges stop the fill too: a night skyline can be nearly the colour of the sky.
@@ -46,6 +54,10 @@ def sky_mask(rgb: np.ndarray, depth: np.ndarray) -> np.ndarray:
             cv2.floodFill(img, block, (x, 0), 0, step, step, 4 | cv2.FLOODFILL_MASK_ONLY | (2 << 8))
     sky = block[1:-1, 1:-1] == 2
     sky = cv2.morphologyEx(sky.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8)).astype(bool)
+    if sky_prob is not None:
+        sure = (sky_prob > SKY_PROB) & (depth <= SKY_DEPTH)
+        _, labels = cv2.connectedComponents((sure | sky).astype(np.uint8), connectivity=4)
+        sky |= np.isin(labels, np.unique(labels[sky])) & sure
     # Land is what connects to the bottom edge; any other island is in the sky.
     n, labels = cv2.connectedComponents((~sky).astype(np.uint8), connectivity=4)
     ground = set(np.unique(labels[-1][~sky[-1]]).tolist())
@@ -86,7 +98,7 @@ def horizon(land: np.ndarray) -> int:
     return int(rows[0]) if rows.size else land.shape[0]
 
 
-def split(rgb: Image.Image, depth: np.ndarray, indoor: bool) -> tuple[list[Image.Image], int | None]:
+def split(rgb: Image.Image, depth: np.ndarray, indoor: bool, sky_prob: np.ndarray | None = None) -> tuple[list[Image.Image], int | None]:
     """Far-to-near RGBA layers at PLATE_W x PLATE_H, and the plate's horizon row (None indoors).
     The far layer is opaque except for the sky (outdoors); each nearer layer holds only what is
     in front of its depth split. Where a nearer layer covers the one behind, the one behind is
@@ -96,8 +108,9 @@ def split(rgb: Image.Image, depth: np.ndarray, indoor: bool) -> tuple[list[Image
     d = (d - d.min()) / max(1e-6, float(d.max() - d.min()))
     d = cv2.medianBlur(d, 5)
     img = np.ascontiguousarray(img)
+    prob = None if sky_prob is None else cv2.resize(sky_prob.astype(np.float32), (PLATE_W, PLATE_H), interpolation=cv2.INTER_AREA)
 
-    sky = np.zeros(d.shape, bool) if indoor else sky_mask(img, d)
+    sky = np.zeros(d.shape, bool) if indoor else sky_mask(img, d, prob)
     land = ~sky
     vals = d[land]
     hz = None if indoor else horizon(land)

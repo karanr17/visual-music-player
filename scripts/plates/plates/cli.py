@@ -76,7 +76,7 @@ def generate(args: argparse.Namespace) -> None:
     fresh = [k for k in todo if not (raw and raw_of(k).exists())]
     print(f"{len(plates)} cached, {len(todo) - len(fresh)} to split from saved images, {len(fresh)} to generate")
 
-    from .models import Depth, Flux
+    from .models import Depth, Flux, Sky
 
     images = {k: Image.open(raw_of(k)).convert("RGB") for k in todo if k not in fresh}
     timings: list[float] = []
@@ -94,15 +94,16 @@ def generate(args: argparse.Namespace) -> None:
 
     if images:
         depth = Depth()
+        sky = Sky()
         indoor = {s.key for s in sections if s.key and s.setting in INDOOR}
         for k, img in images.items():
-            layers, hz = split(img, depth(img), k in indoor)
+            layers, hz = split(img, depth(img), k in indoor, None if k in indoor else sky(img))
             plates[k] = {"prompt": wanted[k], "seed": seed_for(wanted[k]), "horizon": hz, "layers": [_png(x) for x in layers]}
 
     doc = {
         "version": 1,
         "trackKey": script["trackKey"],
-        "model": f"FLUX.1-schnell ({args.model}), {args.steps} steps; Depth Anything V2 Small",
+        "model": f"FLUX.1-schnell ({args.model}), {args.steps} steps; Depth Anything V2 Small; UperNet ConvNeXt-T sky",
         "width": PLATE_W,
         "height": PLATE_H,
         "plates": plates,
