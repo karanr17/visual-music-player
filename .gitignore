@@ -19,6 +19,7 @@ endsong*.json
 
 # Demo lyrics we have the rights to (CC BY, see docs/demo/).
 !docs/demo/*.lrc
+!public/demo/*.lrc
 public/__local/
 
 # scripts/plates (Python, uv)
@@ -26,3 +27,6 @@ public/__local/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Demo audio, fetched by scripts/fetch-demo-audio.sh (CC BY, hosted only on the Pages build).
+public/audio/

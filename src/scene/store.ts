@@ -12,6 +12,24 @@ export function trackKey(track: Track): string {
 }
 
 export const getScript = (scriptKey: string) => dbGet<SceneScript>("scripts", scriptKey);
+
+// Scene scripts shipped with the static build (public/scripts/) for the demo songs, by the audio's
+// SHA-256, so the hosted demo needs no LLM. The script takes the track's own key, which is what
+// its plates and cache are matched by.
+export async function bundledScript(sha256: string, key: string): Promise<SceneScript | null> {
+  const base = import.meta.env.BASE_URL;
+  try {
+    const index = await fetch(`${base}scripts/index.json`);
+    if (!index.ok) return null;
+    const name = ((await index.json()) as Record<string, string>)[sha256];
+    if (!name) return null;
+    const res = await fetch(`${base}scripts/${name}`);
+    const parsed = res.ok ? SceneScript.safeParse(await res.json()) : null;
+    return parsed?.success ? { ...parsed.data, trackKey: key } : null;
+  } catch {
+    return null;
+  }
+}
 export const saveScript = (scriptKey: string, s: SceneScript) => dbPut("scripts", scriptKey, s);
 
 export async function getPrefs(key: string): Promise<SongPrefs> {

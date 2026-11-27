@@ -12,6 +12,8 @@ export interface Track {
   artist: string;
   album: string;
   duration: number;
+  // Attribution the player shows while it plays (the bundled CC BY demo songs).
+  credit?: { text: string; url: string };
 }
 
 const AUDIO_EXT = /\.(mp3|m4a|aac|flac|wav|ogg|opus|webm)$/i;

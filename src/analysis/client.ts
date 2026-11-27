@@ -114,7 +114,8 @@ export interface AnalysisOptions {
   onServerStart?: () => void;
 }
 
-// Cache first, then mc serve, then a sidecar file, then the bundled demo analyses. Never throws:
+// Cache first, then the bundled demo analyses (what mc serve would return for those exact files),
+// then mc serve, then a sidecar file. Never throws:
 // without analysis the player still works, it just doesn't know the music's structure.
 export async function loadAnalysis(track: Track, opts: AnalysisOptions): Promise<LoadedAnalysis | null> {
   let sha: string;
@@ -129,6 +130,8 @@ export async function loadAnalysis(track: Track, opts: AnalysisOptions): Promise
   if (fromCache) return { analysis: fromCache, origin: "cache", sha256: sha };
 
   const found = async (): Promise<[SongAnalysis, AnalysisOrigin] | null> => {
+    const bundled = await fromBundle(sha, opts.signal);
+    if (bundled) return [bundled, "bundled"];
     if (opts.serverUrl) {
       try {
         opts.onServerStart?.();
@@ -140,9 +143,7 @@ export async function loadAnalysis(track: Track, opts: AnalysisOptions): Promise
       }
     }
     const side = await fromSidecar(track, sha);
-    if (side) return [side, "sidecar"];
-    const bundled = await fromBundle(sha, opts.signal);
-    return bundled ? [bundled, "bundled"] : null;
+    return side ? [side, "sidecar"] : null;
   };
 
   try {

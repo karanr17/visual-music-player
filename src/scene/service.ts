@@ -8,7 +8,7 @@ import { ambientScript } from "./compile";
 import { NoProviderError, providerCaller } from "./interpret";
 import { compileResult, runPipeline } from "./pipeline";
 import type { SceneScript } from "./schema";
-import { getPrefs, getScript, recordUnmapped, saveScript, saveSprites, spriteLibrary, trackKey, type SongPrefs } from "./store";
+import { bundledScript, getPrefs, getScript, recordUnmapped, saveScript, saveSprites, spriteLibrary, trackKey, type SongPrefs } from "./store";
 
 // API errors stringify as "400 {json…}"; the nested message is the part worth showing.
 function readableError(err: unknown): string {
@@ -112,7 +112,7 @@ export class SceneService extends EventTarget {
     const baseKey = `${key}#${lyricsHash(lyrics)}`;
     const model = generatorId();
     const scriptKey = scriptKeyFor(baseKey, model, analysis);
-    const cached = await getScript(scriptKey);
+    const cached = (await getScript(scriptKey)) ?? (analysis ? await bundledScript(analysis.sha256, key) : null);
     return {
       track,
       key,
