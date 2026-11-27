@@ -2,14 +2,16 @@
 # Downloads the three CC BY 3.0 demo songs from ccMixter into public/audio/ (gitignored) and
 # checks each against the SHA-256 its bundled analysis records. The Pages workflow runs this
 # before building; run it locally to try the demo songs under `npm run dev`.
-# ccMixter only serves the MP3s with a Referer from the song's page.
+# ccMixter only serves the MP3s with a Referer from the song's page, and refuses GitHub's runners,
+# so the same files are also attached to this repository's demo-audio-v1 release.
 set -euo pipefail
+MIRROR=https://github.com/karanr17/visual-music-player/releases/download/demo-audio-v1
 cd "$(dirname "$0")/.."
 mkdir -p public/audio
 while read -r slug page url sha; do
   out="public/audio/$slug.mp3"
   if [[ ! -s "$out" ]] || [[ "$(shasum -a 256 "$out" | cut -d' ' -f1)" != "$sha" ]]; then
-    curl -fsSL --retry 3 -e "$page" -o "$out" "$url"
+    curl -fsSL --retry 2 --connect-timeout 10 -e "$page" -o "$out" "$url" || curl -fsSL --retry 3 -o "$out" "$MIRROR/$slug.mp3"
   fi
   got=$(shasum -a 256 "$out" | cut -d' ' -f1)
   if [[ "$got" != "$sha" ]]; then
