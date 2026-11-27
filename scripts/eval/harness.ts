@@ -7,6 +7,7 @@ import { SongAnalysis } from "../../src/analysis/schema";
 import type { Track } from "../../src/library/library";
 import { parseLrc, type Lyrics } from "../../src/lyrics/lyrics";
 import type { ModelCaller } from "../../src/scene/interpret";
+import { cleanUnmapped } from "../../src/scene/director";
 import { compileResult, runPipeline } from "../../src/scene/pipeline";
 import type { SceneScript } from "../../src/scene/schema";
 
@@ -314,7 +315,8 @@ function unmapped(songs: Song[], out: string, arms: string[]): void {
       const f = join(out, arm, `${song.id}.json`);
       if (!existsSync(f)) continue;
       const rec: GenRecord = JSON.parse(readFileSync(f, "utf8"));
-      for (const u of new Set(rec.script?.unmapped ?? [])) counts.set(u, (counts.get(u) ?? 0) + 1);
+      // Older runs predate cleanUnmapped; clean them the same way so the counts compare.
+      for (const u of new Set(cleanUnmapped(rec.script?.unmapped ?? []))) counts.set(u, (counts.get(u) ?? 0) + 1);
     }
   }
   for (const [c, n] of [...counts].sort((x, y) => y[1] - x[1]).slice(0, 80)) console.log(`${n}\t${c}`);

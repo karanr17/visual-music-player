@@ -103,13 +103,14 @@ describe("unmapped log", () => {
         "rooftop",
         "rain",
         "storm cloud",
-        "factory (lines 17, 20, 35; drawn as houses)",
+        "fuel pump (lines 17, 20, 35; drawn as houses)",
+        "factory",
         "figure's long shadow stretching across the whole empty road at night",
         "barrel (line 12)",
         "lighthouse beam",
         "river",
       ]),
-    ).toEqual(["lighthouse beam", "storm cloud", "factory", "barrel"]);
+    ).toEqual(["lighthouse beam", "storm cloud", "fuel pump", "barrel"]);
   });
 });
 

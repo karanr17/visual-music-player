@@ -55,7 +55,8 @@ Other scripts:
 | Command | What it does |
 |---|---|
 | `npm run typecheck` | `tsc --noEmit` for the app, then again with Node types for the tests |
-| `npm test` | unit tests (vitest): the SongAnalysis schema check, timeline, downbeat snapping, compile, prompt |
+| `npm test` | unit tests (vitest): the SongAnalysis schema check, timeline, downbeat snapping, compile, prompt, rhythm, director/script merging |
+| `node scripts/eval/run.mjs …` | the scene-script eval (see [docs/eval](docs/eval/README.md)) |
 | `npm run build` | typecheck, then a static build into `dist/` |
 | `npm run preview` | serve the built `dist/` |
 | `scripts/check-secrets.sh` | the no-secrets check CI runs (add `--history` to scan every commit) |
@@ -92,6 +93,45 @@ Pick one in **Settings → Scene imagination**. In *Auto* the player tries them 
    origin) so it accepts browser requests.
 
 Choose *Off* to get ambient scenes with no LLM at all.
+
+### Two passes: director, then script
+
+With **Settings → Plan first** on (the default), a scene script takes two calls:
+
+1. A **director** model (Claude Sonnet 5.5 by default; set per provider, including an Ollama model)
+   reads the lyrics and the audio analysis and writes a plan: a logline, how the song develops, the
+   look and cast, the sections with their worlds and transitions, and a shot and a one-line focus
+   for every line ("the couple walking apart on the road").
+2. The **script** model (the one picked in the player bar, Haiku 5.5 by default) turns the plan into
+   the engine's moments: which subjects, where, how they move, particles and accents. If it skips
+   part of a long song, it is asked again for the missing lines.
+
+The director decides structure, worlds, shots, look and cast; the script decides what is in each
+picture (`mergePasses` in `src/scene/director.ts`). If the director call fails, the song falls back
+to a single pass. Scripts may draw at most two tiny props (8-16 px) as sprites; everything else
+comes from the vocabulary.
+
+### Does it help? The eval
+
+An LLM judge (Claude Opus 5.5) scored scripts for 10 CC BY songs against a written
+[rubric](docs/eval/rubric.md): fit to the lyrics, use of the musical structure, visual variety,
+and renderability, 1-10, two samples per script. Method, per-song pairing and limits are in
+[docs/eval](docs/eval/README.md).
+
+| Pipeline | Overall (± judge gap) | Fit | Structure | Variety | Render | Unmapped | s / song | API-equiv $ / song |
+|---|---|---|---|---|---|---|---|---|
+| `main`: one pass, Haiku 5.5 | 6.22 ± 0.35 | **6.5** | 6.0 | 5.5 | 6.8 | 1.3 | 96 | 0.013 |
+| two passes v1 (Sonnet director + Haiku script) | 6.16 ± 0.23 | 6.3 | 5.9 | 6.0 | 6.5 | 6.3 | 96 | 0.108 |
+| two passes v2 (this branch) | 6.22 ± 0.25 | 6.2 | 6.1 | 5.7 | **7.0** | 2.4 | 115 | 0.110 |
+| ablation: one pass, Sonnet 5.5 | **6.26** ± 0.28 | 6.4 | **6.2** | **6.1** | 6.4 | 2.2 | 38 | 0.093 |
+
+Honest reading: no pipeline is measurably better overall; the differences (≤ 0.1) are smaller
+than the judge's disagreement with itself. The two-pass pipeline gives the most renderable and
+most consistent scripts but reads the lyrics slightly less well than one pass, and one pass on the
+stronger model does as well for less time and money. The v1 → v2 iteration fixed real failures (a
+long song left half empty, a noisy unmapped log) rather than raising the average. What scripts
+asked for and couldn't draw is collected in [docs/vocab-roadmap.md](docs/vocab-roadmap.md); four
+of those (record player, factory, volcano, cow) are now in the vocabulary.
 
 ### Keys stay out of the repo
 

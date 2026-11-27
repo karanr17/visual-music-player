@@ -201,7 +201,8 @@ export class App {
     const p = (e as CustomEvent<Prepared>).detail;
     this.renderPlaylist();
     if (p.track.id !== this.tracks[this.index]?.id) return;
-    const swapped = this.current?.script !== p.script;
+    // The service updates the Prepared it handed out in place, so compare with what is on screen.
+    const swapped = this.director.loadedScript !== p.script;
     this.current = p;
     this.applyRhythm();
     if (swapped) {

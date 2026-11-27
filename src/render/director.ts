@@ -88,6 +88,10 @@ export class Director {
     this.load(script, style);
   }
 
+  get loadedScript(): SceneScript {
+    return this.script;
+  }
+
   load(script: SceneScript, style: Look): void {
     this.script = script;
     this.style = style;
