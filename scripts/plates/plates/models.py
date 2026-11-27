@@ -16,9 +16,9 @@ from PIL import Image
 DEFAULT_MODEL = "dhairyashil/FLUX.1-schnell-mflux-4bit"
 DEPTH_MODEL = "depth-anything/Depth-Anything-V2-Small-hf"
 
-# FLUX wants multiples of 16; twice the plate size, so the box downsample cleans up FLUX's
-# fine noise into solid pixels.
-GEN_W, GEN_H = 768, 432
+# Multiples of 16 for FLUX, a little above the 384x216 plate so the box downsample turns FLUX's
+# fine noise into solid pixels. 768x432 takes twice as long and looks no better at plate size.
+GEN_W, GEN_H = 512, 288
 
 
 def _local(repo: str) -> str:
@@ -36,6 +36,9 @@ class Flux:
 
         self.mx = mx
         self.name = model
+        # Without a cap MLX keeps freed buffers around, and next to a browser and an IDE that
+        # pushes a 16-18 GB Mac into swap.
+        mx.set_cache_limit(512 * 1024**2)
         path = _local(model)
         t = time.perf_counter()
         self.flux = Flux1(model_path=path)

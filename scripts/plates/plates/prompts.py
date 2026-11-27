@@ -46,12 +46,12 @@ WEATHER_LOOK = {
     "wind": "windswept",
 }
 
-# Asks for what the player needs: a side-on landscape with open ground near the bottom, where the
-# sprite characters stand, and nothing alive in it, since those are drawn on top.
-STYLE = (
-    "wide side-scrolling video game background, detailed 16-bit pixel art scenery, flat shading, "
-    "clear horizon, open empty ground across the foreground, no people, no animals, no text"
-)
+# Style first: FLUX.1-schnell weights the start of a prompt most, and with the style last it
+# draws photographs. "Limited palette" made it add palette-swatch strips along the bottom edge,
+# and "open ground in the foreground" a strip of ground tiles, so neither is asked for.
+STYLE = "Pixel art landscape, 16-bit console game background, dithered shading"
+# The player stands its sprite characters on the lower part of the frame and draws its own.
+LAYOUT = "Wide view from eye level, the lower third is plain ground continuing to the bottom edge, no characters, no text"
 
 
 @dataclass(frozen=True)
@@ -71,8 +71,8 @@ def flux_prompt(world: dict) -> str:
     light = TIME_LIGHT.get(world.get("timeOfDay", ""), "")
     weather = WEATHER_LOOK.get(world.get("weather", ""), "")
     mood = world.get("mood", "")
-    parts = [subject.rstrip("."), ", ".join(p for p in (light, weather, f"{mood} mood" if mood else "") if p), STYLE]
-    return ". ".join(p for p in parts if p)
+    look = ", ".join(p for p in (light, weather, f"{mood} mood" if mood else "") if p)
+    return f"{STYLE}: {subject.rstrip('.')}. {look + '. ' if look else ''}{LAYOUT}"
 
 
 def seed_for(prompt: str) -> int:
@@ -81,7 +81,8 @@ def seed_for(prompt: str) -> int:
 
 def plan(script: dict) -> list[SectionPlate]:
     """One entry per section. A section that returns (same recurrence group and setting) reuses
-    the first occurrence's plate even if its plate text drifted."""
+    the first occurrence's plate even if its plate text drifted. A shared plate is generated
+    from its first section's prompt."""
     out: list[SectionPlate] = []
     first: dict[tuple[str, str], str] = {}
     for i, s in enumerate(script["sections"]):
@@ -91,7 +92,9 @@ def plan(script: dict) -> list[SectionPlate]:
             out.append(SectionPlate(i, w["setting"], script_prompt, None, None))
             continue
         prompt = flux_prompt(w)
-        key = hashlib.sha1(prompt.encode()).hexdigest()[:12]
+        # The same place described in the same words is one plate, whatever the time or weather:
+        # the player re-tones it to each section's palette and draws weather and sky itself.
+        key = hashlib.sha1(f"{w['setting']}|{script_prompt or prompt}".encode()).hexdigest()[:12]
         rec = s.get("recurrence")
         if rec:
             key = first.setdefault((rec, w["setting"]), key)

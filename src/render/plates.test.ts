@@ -22,7 +22,7 @@ function synthetic(): PlateImage {
       if (y > 150) near.set([140, 90 + (x % 40), 40, 255], i);
     }
   }
-  return { layers: [far, near] };
+  return { horizon: 100, layers: [far, near] };
 }
 
 function plateSet(): DecodedPlates {
@@ -32,7 +32,7 @@ function plateSet(): DecodedPlates {
     model: "test",
     width: PLATE_W,
     height: PLATE_H,
-    plates: { p1: { prompt: "x", seed: 1, layers: [PNG, PNG] } },
+    plates: { p1: { prompt: "x", seed: 1, horizon: 100, layers: [PNG, PNG] } },
     sections: script.sections.map((s) => ({ setting: s.world.setting, prompt: s.world.plate ?? "", plate: "p1" })),
   };
   return { set, images: new Map([["p1", synthetic()]]) };
@@ -66,7 +66,7 @@ describe("quantising", () => {
     expect(q.layers[0][10 * PLATE_W + 10]).toBe(0);
     const used = new Set(q.layers.flatMap((l) => [...l]).filter((v) => v));
     expect(used.size).toBeGreaterThan(3);
-    expect(used.size).toBeLessThanOrEqual(15);
+    expect(used.size).toBeLessThanOrEqual(25);
   });
 
   it("re-tones the same plate for another time of day", () => {

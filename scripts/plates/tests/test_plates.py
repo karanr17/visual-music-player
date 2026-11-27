@@ -26,7 +26,7 @@ def test_plan_shares_plates_for_returning_sections_and_skips_roads():
     assert p[3].key == p[0].key  # same prompt text, same plate
     assert p[2].script_prompt == "a hill, later"
     assert "sandy beach" in p[4].prompt  # no plate text: falls back to the setting
-    assert "no people" in p[0].prompt
+    assert p[0].prompt.startswith("Pixel art") and "no characters" in p[0].prompt
 
 
 def landscape():
@@ -42,7 +42,8 @@ def landscape():
 
 def test_split_cuts_the_sky_and_orders_layers_far_to_near():
     img, depth = landscape()
-    layers = split(img, depth, indoor=False)
+    layers, hz = split(img, depth, indoor=False)
+    assert abs(hz - 60) <= 3  # row 120 of 432, at the plate's 216 rows
     assert len(layers) == 3
     alpha = [np.asarray(x)[..., 3] > 0 for x in layers]
     for a in alpha:
@@ -57,5 +58,6 @@ def test_split_cuts_the_sky_and_orders_layers_far_to_near():
 
 def test_split_indoors_keeps_the_whole_picture():
     img, depth = landscape()
-    layers = split(img, depth, indoor=True)
+    layers, hz = split(img, depth, indoor=True)
+    assert hz is None and len(layers) == 1
     assert (np.asarray(layers[0])[..., 3] > 0).all()

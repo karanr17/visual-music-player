@@ -56,7 +56,7 @@ async function decodeLayer(url: string): Promise<Uint8ClampedArray> {
 
 export async function decode(set: PlateSet): Promise<DecodedPlates> {
   const images = new Map<string, PlateImage>();
-  for (const [id, p] of Object.entries(set.plates)) images.set(id, { layers: await Promise.all(p.layers.map(decodeLayer)) });
+  for (const [id, p] of Object.entries(set.plates)) images.set(id, { horizon: p.horizon, layers: await Promise.all(p.layers.map(decodeLayer)) });
   return { set, images };
 }
 

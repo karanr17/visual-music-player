@@ -1,0 +1,1402 @@
+{
+ "version": 1,
+ "trackKey": "57378",
+ "source": "claude",
+ "style": "dream",
+ "cast": {
+  "lead": {
+   "gender": "male",
+   "age": "adult",
+   "skin": "#8d5a3b",
+   "hair": "#2a1c14",
+   "hairStyle": "short",
+   "top": "#3f5a7a",
+   "bottom": "#2b2f3a",
+   "outfit": "pants"
+  },
+  "partner": {
+   "gender": "female",
+   "age": "adult",
+   "skin": "#c68a64",
+   "hair": "#3a2418",
+   "hairStyle": "long",
+   "top": "#b5484f",
+   "bottom": "#b5484f",
+   "outfit": "dress"
+  },
+  "child": {
+   "gender": "neutral",
+   "age": "child",
+   "skin": "#d9a47e",
+   "hair": "#4a3020",
+   "hairStyle": "short",
+   "top": "#e0b84a",
+   "bottom": "#4a5a7a",
+   "outfit": "shorts"
+  }
+ },
+ "sections": [
+  {
+   "label": "intro",
+   "start": 0,
+   "end": 22.272,
+   "world": {
+    "setting": "snowfield",
+    "timeOfDay": "dusk",
+    "weather": "fog",
+    "mood": "cold",
+    "camera": "drift",
+    "plate": "A wide frozen snowfield under a heavy violet dusk, cracked ice sheets and a distant leafless tree on the horizon, pale fog over the lower hills."
+   },
+   "transitionIn": "fade_black",
+   "transitionDuration": 1.823999999999991,
+   "moments": [
+    {
+     "t": 0,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "dead_tree",
+       "custom": "",
+       "position": "far",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "ash",
+     "event": "none",
+     "intensity": 0.4
+    }
+   ],
+   "recurrence": "A"
+  },
+  {
+   "label": "verse",
+   "start": 22.272,
+   "end": 45.824,
+   "world": {
+    "setting": "snowfield",
+    "timeOfDay": "dusk",
+    "weather": "cloudy",
+    "mood": "cold",
+    "camera": "drift",
+    "plate": "A wide frozen snowfield under a heavy violet dusk, cracked ice sheets and a distant leafless tree on the horizon, pale fog over the lower hills."
+   },
+   "transitionIn": "time_shift",
+   "transitionDuration": 4.255999999999979,
+   "moments": [
+    {
+     "t": 22,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      },
+      {
+       "kind": "couple",
+       "custom": "",
+       "position": "far",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.5
+    },
+    {
+     "t": 25,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.5
+    },
+    {
+     "t": 29,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      },
+      {
+       "kind": "planet",
+       "custom": "",
+       "position": "sky",
+       "motion": "drift",
+       "focus": true
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.55
+    },
+    {
+     "t": 33.36,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      },
+      {
+       "kind": "broken_heart",
+       "custom": "",
+       "position": "center",
+       "motion": "drift",
+       "focus": true
+      }
+     ],
+     "particles": "ash",
+     "event": "shake",
+     "intensity": 0.7
+    }
+   ],
+   "recurrence": "B"
+  },
+  {
+   "label": "verse",
+   "start": 45.824,
+   "end": 62.613,
+   "world": {
+    "setting": "snowfield",
+    "timeOfDay": "dusk",
+    "weather": "cloudy",
+    "mood": "cold",
+    "camera": "drift",
+    "plate": "A wide frozen snowfield under a heavy violet dusk, cracked ice sheets and a distant leafless tree on the horizon, pale fog over the lower hills."
+   },
+   "transitionIn": "time_shift",
+   "transitionDuration": 4.255999999999979,
+   "moments": [
+    {
+     "t": 45.5,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "clock",
+       "custom": "",
+       "position": "center",
+       "motion": "fall",
+       "focus": true
+      },
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.6
+    },
+    {
+     "t": 50,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "factory",
+       "custom": "",
+       "position": "far",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "ash",
+     "event": "none",
+     "intensity": 0.55
+    },
+    {
+     "t": 54.4,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "crowd",
+       "custom": "",
+       "position": "center",
+       "motion": "drift",
+       "focus": true
+      },
+      {
+       "kind": "wilted_flower",
+       "custom": "",
+       "position": "foreground",
+       "motion": "sway",
+       "focus": false
+      }
+     ],
+     "particles": "ash",
+     "event": "darken",
+     "intensity": 0.7
+    },
+    {
+     "t": 57.66,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "walking_figure",
+       "custom": "",
+       "position": "far",
+       "motion": "walk",
+       "focus": true
+      },
+      {
+       "kind": "dead_tree",
+       "custom": "",
+       "position": "right",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "ash",
+     "event": "none",
+     "intensity": 0.7
+    }
+   ],
+   "recurrence": "B"
+  },
+  {
+   "label": "chorus",
+   "start": 62.613,
+   "end": 93.995,
+   "world": {
+    "setting": "flower_field",
+    "timeOfDay": "dusk",
+    "weather": "clear",
+    "mood": "hopeful",
+    "camera": "float",
+    "plate": "A wide field of wildflowers running to low hills under a glowing amber and rose sky, soft low light, one old tree on the horizon."
+   },
+   "transitionIn": "pan_up",
+   "transitionDuration": 2.431999999999988,
+   "moments": [
+    {
+     "t": 62.82,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "rise",
+       "focus": true
+      },
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "fireflies",
+     "event": "pulse",
+     "intensity": 0.8
+    },
+    {
+     "t": 67.58,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "couple",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "fireflies",
+     "event": "none",
+     "intensity": 0.85
+    },
+    {
+     "t": 72.36,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "walking_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "walk",
+       "focus": false
+      },
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "rise",
+       "focus": true
+      },
+      {
+       "kind": "flower",
+       "custom": "",
+       "position": "foreground",
+       "motion": "sway",
+       "focus": false
+      }
+     ],
+     "particles": "petals",
+     "event": "none",
+     "intensity": 0.9
+    },
+    {
+     "t": 77,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "sparkles",
+     "event": "pulse",
+     "intensity": 0.95
+    }
+   ],
+   "recurrence": "C"
+  },
+  {
+   "label": "pre_chorus",
+   "start": 93.995,
+   "end": 118.251,
+   "world": {
+    "setting": "rooftop",
+    "timeOfDay": "night",
+    "weather": "clear",
+    "mood": "cold",
+    "camera": "static",
+    "plate": "A city rooftop at night with water tanks and antennas, a dark skyline of lit office windows and one red warning light, open concrete roof in front."
+   },
+   "transitionIn": "dissolve",
+   "transitionDuration": 1.823999999999991,
+   "moments": [
+    {
+     "t": 92.94,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      },
+      {
+       "kind": "phone",
+       "custom": "",
+       "position": "right",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.6
+    },
+    {
+     "t": 98.56,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "clock",
+       "custom": "",
+       "position": "center",
+       "motion": "spin",
+       "focus": true
+      },
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "none",
+     "event": "flash",
+     "intensity": 0.7
+    },
+    {
+     "t": 101.72,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "window_light",
+       "custom": "",
+       "position": "far",
+       "motion": "still",
+       "focus": true
+      },
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.65
+    },
+    {
+     "t": 106.06,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "none",
+     "event": "lights_off",
+     "intensity": 0.85
+    }
+   ],
+   "recurrence": "D"
+  },
+  {
+   "label": "chorus",
+   "start": 118.251,
+   "end": 140.075,
+   "world": {
+    "setting": "flower_field",
+    "timeOfDay": "dusk",
+    "weather": "clear",
+    "mood": "hopeful",
+    "camera": "float",
+    "plate": "A wide field of wildflowers running to low hills under a glowing amber and rose sky, soft low light, one old tree on the horizon."
+   },
+   "transitionIn": "pan_down",
+   "transitionDuration": 2.431999999999988,
+   "moments": [
+    {
+     "t": 118.2,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "rise",
+       "focus": true
+      },
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "fireflies",
+     "event": "pulse",
+     "intensity": 0.85
+    },
+    {
+     "t": 120.8,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "couple",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "fireflies",
+     "event": "none",
+     "intensity": 0.85
+    },
+    {
+     "t": 125,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "walking_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "walk",
+       "focus": false
+      },
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "rise",
+       "focus": true
+      },
+      {
+       "kind": "flower",
+       "custom": "",
+       "position": "right",
+       "motion": "sway",
+       "focus": false
+      }
+     ],
+     "particles": "petals",
+     "event": "none",
+     "intensity": 0.9
+    },
+    {
+     "t": 130.92,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "sparkles",
+     "event": "pulse",
+     "intensity": 0.95
+    }
+   ],
+   "recurrence": "C"
+  },
+  {
+   "label": "bridge",
+   "start": 140.075,
+   "end": 156.736,
+   "world": {
+    "setting": "sky",
+    "timeOfDay": "night",
+    "weather": "clear",
+    "mood": "serene",
+    "camera": "float",
+    "plate": "A vast night sky above a calm sea of clouds, countless stars and a faint glowing band of galaxy, a soft violet horizon below."
+   },
+   "transitionIn": "zoom_in",
+   "transitionDuration": 2.431999999999988,
+   "moments": [
+    {
+     "t": 140.4,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "sky",
+       "motion": "drift",
+       "focus": true
+      }
+     ],
+     "particles": "stars_falling",
+     "event": "none",
+     "intensity": 0.6
+    },
+    {
+     "t": 145.2,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "sway",
+       "focus": true
+      }
+     ],
+     "particles": "sparkles",
+     "event": "pulse",
+     "intensity": 0.7
+    },
+    {
+     "t": 150,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "sparkles",
+     "event": "shooting_star",
+     "intensity": 0.8
+    }
+   ],
+   "recurrence": "E"
+  },
+  {
+   "label": "bridge",
+   "start": 156.736,
+   "end": 185.515,
+   "world": {
+    "setting": "road",
+    "timeOfDay": "night",
+    "weather": "fog",
+    "mood": "melancholy",
+    "camera": "slow_pan",
+    "plate": "A long empty road vanishing into thick night fog, a few dim street lamps along the verge, dark empty fields on both sides."
+   },
+   "transitionIn": "weather_shift",
+   "transitionDuration": 3.039999999999985,
+   "moments": [
+    {
+     "t": 156.6,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      },
+      {
+       "kind": "street_lamp",
+       "custom": "",
+       "position": "right",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.7
+    },
+    {
+     "t": 159.24,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      },
+      {
+       "kind": "walking_figure",
+       "custom": "",
+       "position": "far",
+       "motion": "walk",
+       "focus": false
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.7
+    },
+    {
+     "t": 161.4,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      },
+      {
+       "kind": "walking_figure",
+       "custom": "",
+       "position": "far",
+       "motion": "walk",
+       "focus": false
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.75
+    },
+    {
+     "t": 163.02,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      },
+      {
+       "kind": "crowd",
+       "custom": "",
+       "position": "far",
+       "motion": "walk",
+       "focus": true
+      }
+     ],
+     "particles": "none",
+     "event": "darken",
+     "intensity": 0.8
+    },
+    {
+     "t": 166,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      },
+      {
+       "kind": "street_lamp",
+       "custom": "",
+       "position": "right",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.75
+    },
+    {
+     "t": 168.5,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.78
+    },
+    {
+     "t": 170.9,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.82
+    },
+    {
+     "t": 172.72,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      },
+      {
+       "kind": "crowd",
+       "custom": "",
+       "position": "far",
+       "motion": "walk",
+       "focus": true
+      }
+     ],
+     "particles": "ash",
+     "event": "darken",
+     "intensity": 0.85
+    },
+    {
+     "t": 175.6,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      },
+      {
+       "kind": "street_lamp",
+       "custom": "",
+       "position": "right",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.8
+    },
+    {
+     "t": 178.1,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.82
+    },
+    {
+     "t": 180.6,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "none",
+     "event": "none",
+     "intensity": 0.88
+    },
+    {
+     "t": 182.44,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      },
+      {
+       "kind": "crowd",
+       "custom": "",
+       "position": "far",
+       "motion": "walk",
+       "focus": false
+      }
+     ],
+     "particles": "ash",
+     "event": "lights_off",
+     "intensity": 0.9
+    }
+   ],
+   "recurrence": "F"
+  },
+  {
+   "label": "chorus",
+   "start": 185.515,
+   "end": 207.339,
+   "world": {
+    "setting": "flower_field",
+    "timeOfDay": "dusk",
+    "weather": "clear",
+    "mood": "hopeful",
+    "camera": "float",
+    "plate": "A wide field of wildflowers running to low hills under a glowing amber and rose sky, soft low light, one old tree on the horizon."
+   },
+   "transitionIn": "flash",
+   "transitionDuration": 0.4,
+   "moments": [
+    {
+     "t": 185.88,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "rise",
+       "focus": true
+      },
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "fireflies",
+     "event": "lights_on",
+     "intensity": 0.9
+    },
+    {
+     "t": 188.98,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "couple",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "fireflies",
+     "event": "none",
+     "intensity": 0.88
+    },
+    {
+     "t": 193.48,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "walking_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "walk",
+       "focus": false
+      },
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "rise",
+       "focus": true
+      },
+      {
+       "kind": "flower",
+       "custom": "",
+       "position": "right",
+       "motion": "sway",
+       "focus": false
+      }
+     ],
+     "particles": "petals",
+     "event": "none",
+     "intensity": 0.92
+    },
+    {
+     "t": 199.4,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "sparkles",
+     "event": "pulse",
+     "intensity": 0.95
+    }
+   ],
+   "recurrence": "C"
+  },
+  {
+   "label": "chorus",
+   "start": 207.339,
+   "end": 226.133,
+   "world": {
+    "setting": "flower_field",
+    "timeOfDay": "dusk",
+    "weather": "clear",
+    "mood": "hopeful",
+    "camera": "float",
+    "plate": "A wide field of wildflowers running to low hills under a glowing amber and rose sky, soft low light, one old tree on the horizon."
+   },
+   "transitionIn": "time_shift",
+   "transitionDuration": 4.255999999999979,
+   "moments": [
+    {
+     "t": 207.6,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      },
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "sway",
+       "focus": true
+      }
+     ],
+     "particles": "fireflies",
+     "event": "none",
+     "intensity": 0.85
+    },
+    {
+     "t": 211.54,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      },
+      {
+       "kind": "couple",
+       "custom": "",
+       "position": "right",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "fireflies",
+     "event": "none",
+     "intensity": 0.85
+    },
+    {
+     "t": 216.12,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "reaching_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": true
+      },
+      {
+       "kind": "wilted_flower",
+       "custom": "",
+       "position": "foreground",
+       "motion": "sway",
+       "focus": false
+      }
+     ],
+     "particles": "petals",
+     "event": "brighten",
+     "intensity": 0.85
+    },
+    {
+     "t": 221.3,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "rise",
+       "focus": true
+      }
+     ],
+     "particles": "sparkles",
+     "event": "pulse",
+     "intensity": 0.92
+    }
+   ],
+   "recurrence": "C"
+  },
+  {
+   "label": "chorus",
+   "start": 226.133,
+   "end": 260.096,
+   "world": {
+    "setting": "flower_field",
+    "timeOfDay": "dawn",
+    "weather": "clear",
+    "mood": "euphoric",
+    "camera": "float",
+    "plate": "A wide field of wildflowers running to low hills under a glowing amber and rose sky, soft low light, one old tree on the horizon."
+   },
+   "transitionIn": "time_shift",
+   "transitionDuration": 4.255999999999979,
+   "moments": [
+    {
+     "t": 225.8,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "couple",
+       "custom": "",
+       "position": "center",
+       "motion": "sway",
+       "focus": true
+      }
+     ],
+     "particles": "fireflies",
+     "event": "brighten",
+     "intensity": 0.9
+    },
+    {
+     "t": 230.2,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "big_sun",
+       "custom": "",
+       "position": "far",
+       "motion": "rise",
+       "focus": true
+      },
+      {
+       "kind": "couple",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "sparkles",
+     "event": "brighten",
+     "intensity": 0.92
+    },
+    {
+     "t": 232.1,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "rise",
+       "focus": true
+      },
+      {
+       "kind": "couple",
+       "custom": "",
+       "position": "right",
+       "motion": "still",
+       "focus": false
+      }
+     ],
+     "particles": "petals",
+     "event": "pulse",
+     "intensity": 0.93
+    },
+    {
+     "t": 234.6,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "rise",
+       "focus": true
+      }
+     ],
+     "particles": "sparkles",
+     "event": "pulse",
+     "intensity": 0.95
+    },
+    {
+     "t": 236.98,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "lone_figure",
+       "custom": "",
+       "position": "left",
+       "motion": "still",
+       "focus": false
+      },
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "sway",
+       "focus": true
+      }
+     ],
+     "particles": "petals",
+     "event": "none",
+     "intensity": 0.9
+    },
+    {
+     "t": 239.68,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "couple",
+       "custom": "",
+       "position": "center",
+       "motion": "sway",
+       "focus": true
+      },
+      {
+       "kind": "flower",
+       "custom": "",
+       "position": "foreground",
+       "motion": "sway",
+       "focus": false
+      }
+     ],
+     "particles": "petals",
+     "event": "none",
+     "intensity": 0.9
+    },
+    {
+     "t": 244.8,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "big_sun",
+       "custom": "",
+       "position": "far",
+       "motion": "rise",
+       "focus": true
+      },
+      {
+       "kind": "bird_flock",
+       "custom": "",
+       "position": "sky",
+       "motion": "fly",
+       "focus": false
+      }
+     ],
+     "particles": "sparkles",
+     "event": "brighten",
+     "intensity": 0.93
+    },
+    {
+     "t": 246.64,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "rise",
+       "focus": true
+      }
+     ],
+     "particles": "sparkles",
+     "event": "pulse",
+     "intensity": 0.95
+    },
+    {
+     "t": 252.2,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "embracing_couple",
+       "custom": "",
+       "position": "center",
+       "motion": "sway",
+       "focus": true
+      }
+     ],
+     "particles": "petals",
+     "event": "none",
+     "intensity": 0.85
+    },
+    {
+     "t": 254.48,
+     "shot": "medium",
+     "subjects": [
+      {
+       "kind": "embracing_couple",
+       "custom": "",
+       "position": "center",
+       "motion": "sway",
+       "focus": true
+      }
+     ],
+     "particles": "petals",
+     "event": "none",
+     "intensity": 0.85
+    },
+    {
+     "t": 257,
+     "shot": "close",
+     "subjects": [
+      {
+       "kind": "heart",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      }
+     ],
+     "particles": "sparkles",
+     "event": "flash",
+     "intensity": 0.95
+    }
+   ],
+   "recurrence": "C"
+  },
+  {
+   "label": "outro",
+   "start": 260.096,
+   "end": 271.621,
+   "world": {
+    "setting": "flower_field",
+    "timeOfDay": "day",
+    "weather": "clear",
+    "mood": "serene",
+    "camera": "drift",
+    "plate": "A wide meadow of wildflowers under a calm pale blue morning sky, low green hills and one old tree on the horizon."
+   },
+   "transitionIn": "crossfade",
+   "transitionDuration": 1.823999999999991,
+   "moments": [
+    {
+     "t": 260.096,
+     "shot": "wide",
+     "subjects": [
+      {
+       "kind": "embracing_couple",
+       "custom": "",
+       "position": "center",
+       "motion": "still",
+       "focus": true
+      },
+      {
+       "kind": "bird_flock",
+       "custom": "",
+       "position": "sky",
+       "motion": "fly",
+       "focus": false
+      }
+     ],
+     "particles": "petals",
+     "event": "none",
+     "intensity": 0.3
+    }
+   ],
+   "recurrence": "G"
+  }
+ ],
+ "unmapped": [
+  "buried heart",
+  "melting ice"
+ ],
+ "createdAt": 1795759340790
+}

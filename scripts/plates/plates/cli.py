@@ -6,7 +6,8 @@
 
 The input is a scene script as the player's editor (E) exports it. Plates already in the output
 file for the same prompt are kept, so re-running after editing one section regenerates only that
-section's plate.
+section's plate. With --raw-dir the raw FLUX images are kept too, and --resplit redoes only the
+depth and layer split from them.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from pathlib import Path
 from PIL import Image
 
 from .layers import PLATE_H, PLATE_W, split
-from .prompts import INDOOR, plan, seed_for
+from .prompts import INDOOR, flux_prompt, plan, seed_for
 
 
 def _png(img: Image.Image) -> str:
@@ -65,39 +66,43 @@ def generate(args: argparse.Namespace) -> None:
         return
 
     old = json.loads(out.read_text()) if out.exists() else {}
-    keep = old.get("plates", {}) if old.get("trackKey") == script["trackKey"] else {}
+    keep = old.get("plates", {}) if old.get("trackKey") == script["trackKey"] and not args.resplit else {}
     plates = {k: keep[k] for k in wanted if k in keep and keep[k]["prompt"] == wanted[k]}
     todo = [k for k in wanted if k not in plates]
-    print(f"{len(plates)} cached, {len(todo)} to generate")
+    raw = Path(args.raw_dir) if args.raw_dir else None
+    if raw:
+        raw.mkdir(parents=True, exist_ok=True)
+    raw_of = lambda k: raw / f"{k}.png" if raw else None  # noqa: E731
+    fresh = [k for k in todo if not (raw and raw_of(k).exists())]
+    print(f"{len(plates)} cached, {len(todo) - len(fresh)} to split from saved images, {len(fresh)} to generate")
 
     from .models import Depth, Flux
 
-    images: dict[str, Image.Image] = {}
+    images = {k: Image.open(raw_of(k)).convert("RGB") for k in todo if k not in fresh}
     timings: list[float] = []
-    model_name = args.model
-    if todo:
+    if fresh:
         flux = Flux(args.model)
-        print(f"FLUX loaded in {flux.load_s:.1f}s")
-        for k in todo:
+        for k in fresh:
             t = time.perf_counter()
             images[k] = flux.generate(wanted[k], seed_for(wanted[k]), steps=args.steps)
             timings.append(time.perf_counter() - t)
             print(f"  {k}: {timings[-1]:.1f}s")
-            if args.keep_raw:
-                images[k].save(out.with_name(f"{out.stem}.{k}.png"))
+            if raw:
+                images[k].save(raw_of(k))
         print(f"FLUX peak memory {flux.peak_gb():.1f} GB")
         flux.close()
 
+    if images:
         depth = Depth()
         indoor = {s.key for s in sections if s.key and s.setting in INDOOR}
         for k, img in images.items():
-            layers = split(img, depth(img), k in indoor)
-            plates[k] = {"prompt": wanted[k], "seed": seed_for(wanted[k]), "layers": [_png(x) for x in layers]}
+            layers, hz = split(img, depth(img), k in indoor)
+            plates[k] = {"prompt": wanted[k], "seed": seed_for(wanted[k]), "horizon": hz, "layers": [_png(x) for x in layers]}
 
     doc = {
         "version": 1,
         "trackKey": script["trackKey"],
-        "model": old.get("model") if not todo and old.get("model") else f"FLUX.1-schnell ({model_name}), {args.steps} steps",
+        "model": f"FLUX.1-schnell ({args.model}), {args.steps} steps; Depth Anything V2 Small",
         "width": PLATE_W,
         "height": PLATE_H,
         "plates": plates,
@@ -112,7 +117,7 @@ def generate(args: argparse.Namespace) -> None:
 def bench(args: argparse.Namespace) -> None:
     from .models import Depth, Flux
 
-    prompt = "a sunflower field running to low hills, a farmhouse and a windmill on the horizon, warm late light. " "wide side-scrolling video game background, detailed 16-bit pixel art scenery, no people"
+    prompt = flux_prompt({"setting": "field", "plate": "a sunflower field running to low hills, a farmhouse and a windmill on the horizon", "timeOfDay": "dusk"})
     flux = Flux(args.model)
     print(f"load: {flux.load_s:.1f}s (weights already downloaded)")
     sizes = [tuple(int(v) for v in s.split("x")) for s in args.sizes.split(",")]
@@ -148,11 +153,12 @@ def main(argv: list[str] | None = None) -> None:
     g.add_argument("--model", default=DEFAULT_MODEL, help="mflux FLUX.1-schnell checkpoint (repo or path)")
     g.add_argument("--steps", type=int, default=4)
     g.add_argument("--dry-run", action="store_true", help="print the prompts and stop")
-    g.add_argument("--keep-raw", action="store_true", help="also save each raw FLUX image as PNG")
+    g.add_argument("--raw-dir", help="keep each raw FLUX image here, and reuse those already there")
+    g.add_argument("--resplit", action="store_true", help="redo depth and layers for every plate (with --raw-dir, without regenerating)")
     g.set_defaults(fn=generate)
     b = sub.add_parser("bench", help="time model load and generation")
     b.add_argument("--model", default=DEFAULT_MODEL)
-    b.add_argument("--sizes", default="768x432,1024x576")
+    b.add_argument("--sizes", default="512x288,768x432")
     b.add_argument("--steps", type=int, default=4)
     b.add_argument("-n", type=int, default=3)
     b.add_argument("--save", action="store_true")
