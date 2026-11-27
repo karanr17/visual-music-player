@@ -61,3 +61,24 @@ def test_split_indoors_keeps_the_whole_picture():
     layers, hz = split(img, depth, indoor=True)
     assert hz is None and len(layers) == 1
     assert (np.asarray(layers[0])[..., 3] > 0).all()
+
+
+def test_split_takes_a_banded_sky_the_segmenter_is_sure_of():
+    """A sunset band whose colour step stops the fill stays in the far layer as a strip of
+    generated sky, unless the segmenter says it is sky."""
+    img, depth = landscape()
+    rgb = np.asarray(img).copy()
+    rgb[80:120] = (250, 105, 170)
+    img = Image.fromarray(rgb)
+    alpha = lambda layers: np.asarray(layers[0])[..., 3] > 0  # noqa: E731
+    band = slice(42, 58)  # rows 84-116 of 432, at the plate's 216 rows
+
+    plain, _ = split(img, depth, indoor=False)
+    assert alpha(plain)[band].all()
+
+    prob = np.zeros(depth.shape, np.float32)
+    prob[:120] = 0.99
+    layers, hz = split(img, depth, indoor=False, sky_prob=prob)
+    assert not alpha(layers)[band].any()
+    assert alpha(layers)[-1].all()
+    assert abs(hz - 60) <= 3

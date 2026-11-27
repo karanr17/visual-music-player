@@ -1,4 +1,5 @@
-"""The two local models: FLUX.1-schnell on MLX (mflux) for the picture, Depth Anything V2 for depth."""
+"""The local models: FLUX.1-schnell on MLX (mflux) for the picture, Depth Anything V2 for depth,
+and UperNet ConvNeXt (ADE20K) for which pixels are sky."""
 
 from __future__ import annotations
 
@@ -15,6 +16,8 @@ from PIL import Image
 # in about 9 GB. Pass --model to use another mflux-format checkpoint or a local path.
 DEFAULT_MODEL = "dhairyashil/FLUX.1-schnell-mflux-4bit"
 DEPTH_MODEL = "depth-anything/Depth-Anything-V2-Small-hf"
+# MIT-licensed, unlike the SegFormer ADE20K checkpoints (NVIDIA's non-commercial licence).
+SKY_MODEL = "openmmlab/upernet-convnext-tiny"
 
 # Multiples of 16 for FLUX, a little above the 384x216 plate so the box downsample turns FLUX's
 # fine noise into solid pixels. 768x432 takes twice as long and looks no better at plate size.
@@ -69,3 +72,23 @@ class Depth:
         out = self.pipe(img)["predicted_depth"]
         d = out.squeeze().float().cpu().numpy()
         return np.asarray(Image.fromarray(d).resize(img.size, Image.Resampling.BILINEAR))
+
+
+class Sky:
+    def __init__(self):
+        import torch
+        from transformers import AutoImageProcessor, AutoModelForSemanticSegmentation
+
+        self.torch = torch
+        path = _local(SKY_MODEL)
+        self.proc = AutoImageProcessor.from_pretrained(path)
+        self.model = AutoModelForSemanticSegmentation.from_pretrained(path).eval()
+        self.sky = next(int(i) for i, name in self.model.config.id2label.items() if name == "sky")
+
+    def __call__(self, img: Image.Image) -> np.ndarray:
+        """Per-pixel probability that the pixel is sky, at the image's size."""
+        torch = self.torch
+        with torch.no_grad():
+            logits = self.model(**self.proc(images=img, return_tensors="pt")).logits
+        prob = torch.nn.functional.interpolate(logits, size=(img.height, img.width), mode="bilinear").softmax(1)
+        return prob[0, self.sky].numpy()

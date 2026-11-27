@@ -102,8 +102,10 @@ browser:
 - **Analyses** ([`public/analysis/`](public/analysis/)) come from music-connector.
 - **Scene scripts** ([`public/scripts/`](public/scripts/)) were written by Claude Sonnet 5.5 (one
   pass, with the analysis) and are picked by the audio's SHA-256 when the browser has no script
-  of its own for the song, so the hosted demo needs no LLM. Drop the same MP3 into a local copy
-  and you get the same script.
+  of its own for the song, so the hosted demo needs no LLM. A song with a bundled script is never
+  sent to a model on its own, even when you switch models (only Regenerate in the editor does
+  that), and the hosted build hides the model picker unless you add an API key, since there is
+  no Claude Code bridge there. Drop the same MP3 into a local copy and you get the same script.
 - **Plates** ([`public/plates/`](public/plates/)) come from `scripts/plates` (see
   [Illustrated mode](#illustrated-mode)).
 - **Lyrics** ([`public/demo/`](public/demo/)) are the published lyrics timed to each recording:
@@ -335,8 +337,12 @@ read as programmer art. Illustrated mode keeps the engine and swaps only the lan
    (Apache-2.0, 4-bit, on MLX via [mflux](https://github.com/filipstrand/mflux)) at 512×288 with
    a pixel-art game-background prompt, then
    [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small-hf)
-   (Apache-2.0) for depth. From that it cuts out the sky (a flood fill from the top edge that
-   follows smooth colour and stops at far depth and strong edges, plus any moon or sun disc),
+   (Apache-2.0) for depth and
+   [UperNet ConvNeXt-T](https://huggingface.co/openmmlab/upernet-convnext-tiny) (MIT, ADE20K) for
+   which pixels are sky. From those it cuts out the sky (a flood fill from the top edge that
+   follows smooth colour and stops at far depth and strong edges, carried on through far pixels
+   the segmenter is sure are sky, so a banded pixel-art sunset doesn't leave a strip above the
+   hills, plus any moon or sun disc),
    splits the land into far, middle and near layers by depth, inpaints what each nearer layer
    hides, measures where the ground meets the sky, and writes everything, at 384×216, into one
    `song.plates.json` next to the script (about 0.1 MB per song).
@@ -362,7 +368,7 @@ or regenerated scripts), the player draws exactly what it drew before.
 
 ```sh
 # 1. In the player, open the scene editor (E) and save the script JSON, e.g. song.scene.json.
-# 2. On an Apple Silicon Mac (first run downloads ~9 GB of FLUX weights and ~100 MB for depth):
+# 2. On an Apple Silicon Mac (first run downloads ~9 GB of FLUX weights and ~100 MB for depth, ~250 MB for sky):
 cd scripts/plates
 uv run plates generate path/to/song.scene.json            # writes path/to/song.plates.json
 uv run plates generate path/to/song.scene.json --dry-run  # just print the prompts

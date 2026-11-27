@@ -58,7 +58,12 @@ async function viaClaude(settings: Settings, req: ModelRequest, signal: AbortSig
 const BRIDGE = "/api/claude-code";
 const BRIDGE_HEADERS = { "content-type": "application/json", "x-vmp-bridge": "1" };
 
+// The bridge is a dev-server route (vite.config.ts). A static host such as GitHub Pages answers its
+// POST with 404 or 405 or an HTML page: that means no bridge, not a failed generation.
+export const BRIDGE_PRESENT = import.meta.env.DEV;
+
 export async function claudeCodeAvailable(): Promise<{ available: boolean; version?: string }> {
+  if (!BRIDGE_PRESENT) return { available: false };
   try {
     const res = await fetch(BRIDGE, { headers: BRIDGE_HEADERS });
     return res.ok ? await res.json() : { available: false };
@@ -69,6 +74,7 @@ export async function claudeCodeAvailable(): Promise<{ available: boolean; versi
 
 // Runs through the local Claude Code CLI via the dev server, billed to the user's Claude plan.
 async function viaClaudeCode(req: ModelRequest, signal: AbortSignal): Promise<unknown> {
+  if (!BRIDGE_PRESENT) throw new NoProviderError("Claude Code bridge only runs under npm run dev");
   let res: Response;
   try {
     res = await fetch(BRIDGE, {
@@ -81,8 +87,9 @@ async function viaClaudeCode(req: ModelRequest, signal: AbortSignal): Promise<un
     if (signal.aborted) throw err;
     throw new NoProviderError("Claude Code bridge isn't reachable");
   }
-  // A static build (no dev server) has no bridge route.
-  if (res.status === 404 || res.status === 403) throw new NoProviderError("Claude Code bridge only runs under npm run dev");
+  if ([403, 404, 405].includes(res.status) || !(res.headers.get("content-type") ?? "").includes("json")) {
+    throw new NoProviderError("Claude Code bridge only runs under npm run dev");
+  }
   const data = await res.json().catch(() => ({}));
   if (res.status === 503) throw new NoProviderError(data.error ?? "Claude Code CLI not found");
   if (!res.ok) throw new InterpretError(`Claude Code: ${data.error ?? res.status}`);
@@ -124,6 +131,10 @@ async function viaOllama(settings: Settings, req: ModelRequest, signal: AbortSig
   return parseJson(data.message?.content ?? "", "Ollama");
 }
 
+// Ollama only answers local origins by default (OLLAMA_ORIGINS), so Auto doesn't try it from a
+// hosted copy, where the attempt would only fail with a connection error in the console.
+const LOCAL_PAGE = typeof location !== "undefined" && ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+
 // The player's providers in Auto order: the Claude subscription (via Claude Code) first, then
 // API credits, then local Ollama.
 export function providerCaller(settings: Settings): ModelCaller {
@@ -133,7 +144,7 @@ export function providerCaller(settings: Settings): ModelCaller {
     const attempts: [boolean, () => Promise<unknown>, ProviderName][] = [
       [provider === "auto" || provider === "claude-code", () => viaClaudeCode(req, signal), "claude"],
       [(provider === "auto" || provider === "claude") && !!settings.apiKey, () => viaClaude(settings, req, signal), "claude"],
-      [provider === "auto" || provider === "ollama", () => viaOllama(settings, req, signal), "ollama"],
+      [(provider === "auto" && LOCAL_PAGE) || provider === "ollama", () => viaOllama(settings, req, signal), "ollama"],
     ];
     let firstRealError: unknown = null;
     let lastUnavailable: NoProviderError | null = null;

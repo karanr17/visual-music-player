@@ -41,6 +41,10 @@ export interface Prepared {
   analysis: LoadedAnalysis | null;
   prefs: SongPrefs;
   script: SceneScript;
+  // The script shipped with the build for this recording (the demo songs), if any.
+  bundled: SceneScript | null;
+  // script is the placeholder drawn from the audio alone, not one written for the song.
+  ambient: boolean;
   status: SceneStatus;
   error?: string;
 }
@@ -112,7 +116,8 @@ export class SceneService extends EventTarget {
     const baseKey = `${key}#${lyricsHash(lyrics)}`;
     const model = generatorId();
     const scriptKey = scriptKeyFor(baseKey, model, analysis);
-    const cached = (await getScript(scriptKey)) ?? (analysis ? await bundledScript(analysis.sha256, key) : null);
+    const bundled = analysis ? await bundledScript(analysis.sha256, key) : null;
+    const cached = (await getScript(scriptKey)) ?? bundled;
     return {
       track,
       key,
@@ -123,15 +128,18 @@ export class SceneService extends EventTarget {
       envelope,
       analysis,
       prefs,
+      bundled,
+      ambient: !cached,
       script: cached ?? ambientScript(track, envelope, key),
       status: cached ? "ready" : "ambient",
     };
   }
 
-  // Current track goes to the front; prefetches go to the back.
+  // Current track goes to the front; prefetches go to the back. A song with a bundled script is
+  // only ever generated for on an explicit force (Regenerate), so the hosted demo never asks a model.
   async request(track: Track, opts: { front?: boolean; force?: boolean } = {}): Promise<void> {
     const p = await this.prepare(track);
-    if (!opts.force && (p.status === "ready" || p.status === "generating" || p.status === "queued")) {
+    if (!opts.force && (p.bundled || p.status === "ready" || p.status === "generating" || p.status === "queued")) {
       if (opts.front && p.status === "queued") this.bump(track.id);
       return;
     }
@@ -200,13 +208,15 @@ export class SceneService extends EventTarget {
       // The model may have been switched while this ran; then it only fills the cache.
       if (p.model === model) {
         p.script = script;
+        p.ambient = false;
         p.status = "ready";
       }
     } catch (err) {
       if (abort.signal.aborted) return;
+      // No model to ask is not a failure: whatever script is on screen stays.
       if (err instanceof NoProviderError) {
-        p.status = "ambient";
-        p.error = err.message;
+        p.status = p.ambient ? "ambient" : "ready";
+        p.error = p.status === "ambient" ? err.message : undefined;
         return;
       }
       p.status = "error";
@@ -220,16 +230,18 @@ export class SceneService extends EventTarget {
   }
 
   // Shows the new generator's (model, or model + reference artwork) cached take on this song, or generates one. The current scenes
-  // stay on screen until the new ones arrive, which makes side-by-side comparison easy.
+  // stay on screen until the new ones arrive, which makes side-by-side comparison easy. A song with
+  // a bundled script falls back to it instead of generating.
   async switchModel(track: Track): Promise<void> {
     const p = await this.prepare(track);
     p.model = generatorId();
     p.scriptKey = scriptKeyFor(p.baseKey, p.model, p.analysis);
     if (this.running?.id === track.id) this.running.abort.abort();
-    const cached = await getScript(p.scriptKey);
+    const cached = (await getScript(p.scriptKey)) ?? p.bundled;
     if (cached) {
       this.queue = this.queue.filter((q) => q.track.id !== track.id);
       p.script = cached;
+      p.ambient = false;
       p.status = "ready";
       p.error = undefined;
       this.emit(p);
@@ -241,6 +253,7 @@ export class SceneService extends EventTarget {
   async replaceScript(track: Track, script: SceneScript): Promise<void> {
     const p = await this.prepare(track);
     p.script = script;
+    p.ambient = false;
     p.status = "ready";
     await saveScript(p.scriptKey, script);
     this.emit(p);
