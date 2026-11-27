@@ -2,7 +2,7 @@ name: Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, karanr17/phase7-portfolio]
   workflow_dispatch:
 
 permissions:
