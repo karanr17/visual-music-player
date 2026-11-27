@@ -176,6 +176,71 @@ function thick(c: SpriteCtx, x0: number, y0: number, x1: number, y1: number, w: 
 
 
 const ART: Partial<Record<SubjectKind, Art | Art[]>> = {
+  // From the scene eval's unmapped log (docs/vocab-roadmap.md).
+  record_player: [
+    "..........ww..",
+    "...#######.w..",
+    ".##########w#.",
+    "####+#oo####w.",
+    ".###########..",
+    "...#######....",
+    "##############",
+    "#cccccccccccc#",
+    "#cc+cccccc+cc#",
+    "##############",
+  ],
+  factory: [[
+      "..v.......v.....",
+      ".vvv.....vvv....",
+      "..vv......vv....",
+      "..##......##....",
+      "..##......##....",
+      "..##......##....",
+      "..##..#...##.#..",
+      "..##.###..##.###",
+      ".###############",
+      ".##+#+##+#+##+##",
+      ".###############",
+      ".##+#+##+#+##+##",
+      ".#######c#######",
+      ".#######c#######",
+    ], [
+      ".v.......v......",
+      "..vv.....vvv....",
+      ".vv........vv...",
+      "..##......##....",
+      "..##......##....",
+      "..##......##....",
+      "..##..#...##.#..",
+      "..##.###..##.###",
+      ".###############",
+      ".##+#+##+#+##+##",
+      ".###############",
+      ".##+#+##+#+##+##",
+      ".#######c#######",
+      ".#######c#######",
+    ]],
+  volcano: [
+    "......o..o......",
+    ".....o+oo+o.....",
+    "......#++#......",
+    ".....##o+##.....",
+    "....###o####....",
+    "...####o#####...",
+    "..#####o######..",
+    ".#####o########.",
+    "######o#########",
+  ],
+  cow: [
+    "............ww.",
+    "..wwww#ww#..www",
+    ".w##wwwwwww#w#.",
+    "#ww##wwww##www.",
+    ".wwwwwwwwwwww..",
+    ".wwwwwwwwwwww..",
+    "..#.#....#.#...",
+    "..#.#....#.#...",
+  ],
   heart: [".oo.oo.", "oo+oooo", "ooooooo", ".ooooo.", "..ooo..", "...o..."],
   broken_heart: [".oo.oo.", "oo+.ooo", "oooo.oo", ".oo.oo.", "..o.o..", "...o..."],
   flower: [".o.o.", "ooooo", ".o+o.", "ooooo", ".o.o.", "..g..", ".gg..", "..gg.", "..g.."],
@@ -419,7 +484,7 @@ function umbrella(c: SpriteCtx, x: number, y: number, r: number, a: number): voi
 // Symbolic objects carry meaning, so they draw at 2x to read at a glance.
 const SYMBOLIC = new Set<SubjectKind>([
   "heart", "broken_heart", "flower", "wilted_flower", "rose", "candle", "lantern", "key", "letter", "crown", "mask", "balloon",
-  "sunflower", "phone",
+  "sunflower", "phone", "record_player",
 ]);
 
 export const FLYING = new Set<SubjectKind>(["bird", "bird_flock", "butterfly", "balloon", "kite"]);

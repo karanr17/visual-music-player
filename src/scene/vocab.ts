@@ -43,6 +43,7 @@ export const SUBJECTS = [
   "car", "train", "boat", "house", "lighthouse", "window_light", "door", "bench",
   "balloon", "kite", "big_moon", "big_sun", "planet", "clock", "key", "letter",
   "guitar", "crown", "chains", "mask", "ladder", "bridge", "rainbow", "sunflower", "ship", "phone",
+  "record_player", "factory", "volcano", "cow",
   "custom",
 ] as const;
 

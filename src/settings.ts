@@ -15,6 +15,11 @@ export interface Settings {
   // In the reference look, also show the artwork to Claude so the scenes themselves follow it.
   referenceForScenes: boolean;
   waitForScenes: boolean;
+  // Two passes: a director model plans the song, then `model` writes the moments from the plan.
+  twoPass: boolean;
+  directorModel: string;
+  // Empty: the director uses ollamaModel too.
+  ollamaDirectorModel: string;
   // Off ignores every analysis source, which also gives a with/without comparison of a song.
   useAnalysis: boolean;
   // How strongly the beat moves the picture; needs a beat grid from the audio analysis.
@@ -58,6 +63,10 @@ const DEFAULTS: Settings = {
   styleOverride: "auto",
   referenceForScenes: true,
   waitForScenes: true,
+  // Opt-in: the eval (docs/eval) found no overall gain over one pass, at about 8x the cost.
+  twoPass: false,
+  directorModel: "claude-sonnet-5-5",
+  ollamaDirectorModel: "",
   useAnalysis: true,
   reactivity: "subtle",
   analysisUrl: DEFAULT_ANALYSIS_URL,

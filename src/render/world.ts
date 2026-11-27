@@ -158,7 +158,7 @@ const FIGURES = new Set<SubjectKind>([
 const SYMBOLIC_SMALL = new Set<SubjectKind>(["heart", "broken_heart", "key", "letter", "crown", "mask", "candle", "lantern", "phone", "clock", "flower", "rose", "wilted_flower"]);
 const ROOTED = new Set<SubjectKind>([
   "house", "tree", "dead_tree", "street_lamp", "lighthouse", "door", "bench", "window_light", "bridge", "ladder",
-  "campfire", "sunflower", "flower", "rose", "wilted_flower",
+  "campfire", "sunflower", "flower", "rose", "wilted_flower", "factory", "volcano",
 ]);
 // Subjects that emit light; stamping them for a rim would stack their glow several times over.
 const GLOWING = new Set<SubjectKind>(["street_lamp", "campfire", "candle", "lantern", "phone", "lighthouse"]);
@@ -166,6 +166,7 @@ const GLIDE = 1.2;
 
 // Half-width of a subject's contact shadow at scale 1.
 const FOOTPRINT: Partial<Record<SubjectKind, number>> = {
+  factory: 8, volcano: 8, cow: 7, record_player: 7,
   couple: 11, embracing_couple: 8, crowd: 44, car: 19, house: 17, tree: 11, dead_tree: 7, bench: 11, dog: 8, cat: 6,
   campfire: 9, street_lamp: 3, lighthouse: 5, child: 4, train: 0, bridge: 0, sunflower: 4, flower: 3, rose: 3,
   wilted_flower: 3, door: 7, sitting_figure: 7,

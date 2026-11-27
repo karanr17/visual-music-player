@@ -1,13 +1,12 @@
 import { loadAnalysis, type LoadedAnalysis } from "../analysis/client";
-import { buildTimeline, segmentLines } from "../analysis/structure";
 import { computeEnvelope, type Envelope } from "../audio/envelope";
 import type { Track } from "../library/library";
 import { loadLyrics, lyricsHash, type Lyrics } from "../lyrics/lyrics";
 import { currentReference, referenceImagePart } from "../reference";
 import { getSettings } from "../settings";
-import { ambientScript, compile, pseudoLines } from "./compile";
-import { interpret, NoProviderError } from "./interpret";
-import { buildUserPrompt } from "./prompt";
+import { ambientScript } from "./compile";
+import { NoProviderError, providerCaller } from "./interpret";
+import { compileResult, runPipeline } from "./pipeline";
 import type { SceneScript } from "./schema";
 import { getPrefs, getScript, recordUnmapped, saveScript, saveSprites, spriteLibrary, trackKey, type SongPrefs } from "./store";
 
@@ -49,7 +48,9 @@ export interface Prepared {
 // Which generator a cached script belongs to, so each model's take on a song is kept apart.
 function generatorId(): string {
   const s = getSettings();
-  const base = s.provider === "ollama" ? `ollama:${s.ollamaModel}` : s.model;
+  const single = s.provider === "ollama" ? `ollama:${s.ollamaModel}` : s.model;
+  const director = s.provider === "ollama" ? s.ollamaDirectorModel || s.ollamaModel : s.directorModel;
+  const base = s.twoPass ? `${single}+dir:${director}` : single;
   const ref = seesReference() ? currentReference() : null;
   return ref ? `${base}+ref:${ref.id}` : base;
 }
@@ -163,25 +164,36 @@ export class SceneService extends EventTarget {
     this.emit(p);
     try {
       const settings = getSettings();
-      const hasLyrics = p.lyrics.lines.length > 0;
-      const analysis = p.analysis?.analysis ?? null;
-      const timeline = hasLyrics && analysis ? buildTimeline(p.lyrics.lines, analysis) : null;
-      const pseudo = hasLyrics ? null : analysis ? segmentLines(analysis) : pseudoLines(p.envelope, p.track.duration);
-      const lineTimes = timeline ? timeline.map((l) => l.t) : hasLyrics ? p.lyrics.lines.map((l) => l.t) : pseudo!.map((l) => l.t);
       const library = await spriteLibrary();
       const image = model.includes("+ref:") ? referenceImagePart() : null;
-      const audio = analysis ? { analysis, timeline } : null;
-      const prompt = buildUserPrompt(p.track, p.lyrics, pseudo, p.prefs.scenePrompt, [...library.keys()], !!image, audio);
-      const { output, provider } = await interpret(settings, prompt, abort.signal, [...library.keys()], image);
+      const result = await runPipeline(
+        {
+          track: p.track,
+          lyrics: p.lyrics,
+          analysis: p.analysis?.analysis ?? null,
+          envelope: p.envelope,
+          userDirection: p.prefs.scenePrompt,
+          librarySprites: [...library.keys()],
+          image,
+        },
+        settings,
+        providerCaller(settings),
+        abort.signal,
+      );
+      const { output, provider, notes } = result;
+      if (result.directorError) logEvent(`${p.track.title || p.track.file.name}: director failed (${result.directorError}); single pass used`);
       // Scripts embed every sprite they use, so an exported script renders on its own.
       const used = new Set(output.sections.flatMap((s) => s.moments.flatMap((m) => m.subjects.map((x) => x.custom).filter(Boolean))));
       const drawn = new Set(output.sprites.map((s) => s.name));
       const sprites = [...output.sprites.filter((s) => used.has(s.name)), ...[...used].filter((n) => !drawn.has(n)).flatMap((n) => library.get(n) ?? [])];
       await saveSprites(output.sprites);
       const script = {
-        ...compile(output, lineTimes, p.track.duration, p.key, provider, analysis ? { analysis, instrumental: lineTimes.map((_, i) => timeline?.[i]?.lyric === null) } : null),
+        ...compileResult(result, p.track.duration, p.key),
         model: provider === "ollama" ? settings.ollamaModel : settings.model,
         sprites,
+        ...(notes
+          ? { direction: { logline: notes.logline, arc: notes.arc, model: provider === "ollama" ? settings.ollamaDirectorModel || settings.ollamaModel : settings.directorModel } }
+          : {}),
       };
       await saveScript(scriptKey, script);
       await recordUnmapped(script.unmapped);
